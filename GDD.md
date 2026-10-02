@@ -110,3 +110,16 @@ Oyunun kontrolünü sağlamak ve gerektiğinde akışı hızlandırmak/müdahale
   1. Doğal Zafer Şartı: Vampirlerin veya Köylülerin kazanması.
   2. Süper Moderatör Müdahalesi: Canberk'in Admin Paneli üzerinden oyunu sıfırlaması veya doğrudan zafer ilan etmesi.
 
+---
+
+## 8. Görsel & Sanatsal Çerçeveleme Sistemi (Collectible Card Deck Architecture)
+- **Tasarım Dili:** Hearthstone / Magic: The Gathering tarzı gotik karanlık fantazi koleksiyon kartı.
+- **Kart Formatı:** 848x1264 px (2:3 dikey tarot oranı).
+- **Çerçeve Elemanları:**
+  - Siyah katedral taşı & antik altın filigranlar.
+  - Köşelerde oyulmuş gargoyle heykelleri ve koyu kırmızı yakut taşlar.
+  - Alt kısımda her rolün ve köylü memesinin adının kazındığı antika pirinç isim plaketi (`KÖYLÜ - Halay Başı Dayı`, `VAMPİR - Gecenin Efendisi` vb.).
+- **Fotoğraf Bütünlüğü:**
+  - Ham Türk köylü fotoğrafları yapay zekayla bozulmadan doğrudan katedral kemerine oturtulmuş; 4 köşe pencerelerin arkasında kalarak sert dikdörtgen kenarları gizlenmiştir.
+- **Kart Arkası:**
+  - Kanlı Ay, gargoyle kanatları ve simya astroloji çemberiyle gotik tarot mührü.

@@ -67,3 +67,21 @@ Tüm önemli değişiklikler ve geliştirme aşamaları bu dosyada kronolojik ol
 - **Tek Tuşla Test Botu Ekleme:**
   - Host kontrollerine `🤖 +1 Test Botu Ekle` butonu eklendi, böylece istenen tam kişi sayısına (7, 8 vb.) kolayca ulaşılabilir.
 
+## [v0.7.0] - 2026-10-02
+### Eklendi & Değiştirildi
+- **Tüm Asset Dosyaları Doğrudan Gotik Çerçeveli Koleksiyon Kartlarına Dönüştürüldü:**
+  - `assets/` klasöründeki tüm görseller (4 Köylü Memesi, Vampir, Doktor, Kahin ve Kart Arkası) artık doğrudan dosyaların kendisinde gotik taş oymaları, antik altın filigranlar, gargoyle figürleri ve yakut mücevherli çerçeveler içermektedir.
+  - **Türk Köylü Memeleri Korundu & Çerçevelendi:**
+    - `assets/koylu1.png`: "KÖYLÜ - Halay Başı Dayı" (Dayı'nın kasketi, yüzü ve halay figürü pencereli çerçevede kesintisiz).
+    - `assets/koylu2.png`: "KÖYLÜ - Köyde Eylem Var!" (Mavi gökyüzü ve eylem pankartı çerçeveye tam oturtuldu).
+    - `assets/koylu3.png`: "KÖYLÜ - Su Bulan Dayı" (Bozkır tepeleri ve su arama dalları net).
+    - `assets/koylu4.png`: "KÖYLÜ - Bilge Kasketli" (Samimi gülüşü ve kasketi kadrajı dolduruyor).
+  - **Özel Roller & Kart Arkası:**
+    - `assets/vampire.jpg`: "VAMPİR - Gecenin Efendisi" (Kızıl gözlü Gotik Drakula kalesi).
+    - `assets/doctor.jpg`: "DOKTOR - Köyün Kurtarıcısı" (Yeşil iksirli veba doktoru).
+    - `assets/seer.jpg`: "KAHİN - Gözcü & Kehanet" (Ametist küreli gotik kahin).
+    - `assets/card_back.jpg`: Kanlı Ay, gargoyle kanatları ve astroloji sembollü karanlık kart arkası.
+  - **CSS & UI Uyumu:**
+    - Kart görünümü 2:3 en-boy oranına (`270px x 402px`) kilitlendi, çerçevelerin hiçbir detayı kırpılmadan mobilde devasa kalitede görünmesi sağlandı.
+    - Rol açıklama ve talimatları kartın altındaki cam gotik bilgi kutusuna (`.role-info-card`) taşındı.
+

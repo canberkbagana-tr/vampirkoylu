@@ -1340,14 +1340,16 @@ class GameController {
               </div>
               <div class="card-face card-front">
                 <img src="${roleData.image}" alt="${roleData.name}" />
-                <div class="card-overlay-info">
-                  <h2 style="color:${roleData.color}">${roleData.name.toUpperCase()}</h2>
-                  <p class="role-desc">${roleData.description}</p>
-                  <div class="role-inst">${roleData.instruction}</div>
-                </div>
               </div>
             </div>
           </div>
+
+          <div class="role-info-card">
+            <h2 style="color:${roleData.color}">${roleData.name.toUpperCase()}</h2>
+            <p class="role-desc">${roleData.description}</p>
+            <div class="role-inst">${roleData.instruction}</div>
+          </div>
+
           <div class="confirm-role-section">
             <button id="btn-toggle-flip" class="btn-secondary" style="width:100%; margin-bottom: 10px;">
               🔄 Kartı Çevir / Gizle

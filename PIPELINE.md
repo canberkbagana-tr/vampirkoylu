@@ -25,3 +25,5 @@ GitHub Pages kısıtı altında 8 farklı telefonun birbiriyle anlık (real-time
 - [x] **Adım 6:** Oyun Mantığı ve Faz Yönetimi (`game.js` - 2 dk sayaç, tekil meme köylü dağıtımı, gizli oylama)
 - [x] **Adım 7:** Canberk Admin & God Mode Sistemi (`game.js`, `style.css` - Röntgenci modu, faz/oylama zorlama, hayat kontrolü)
 - [x] **Adım 8:** GitHub Pages Dağıtım Hazırlığı (`README.md`, göreceli varlık yolları, sıfır-sunucu hazır mimari)
+- [x] **Adım 9:** Dinamik Oyuncu Sayısı ve Özel Rol Yapılandırması (7-8+ kişi desteği, lobi rol stepperları, canlı senkron)
+- [x] **Adım 10:** Gotik Koleksiyon Kartı Çerçeveleme Pipeline'ı (Tüm ham görsellerin katedral taş kemerleri, gargoyle heykelleri, yakut taşlar ve pirinç isim plaketleriyle 848x1264 koleksiyon kartlarına dönüştürülmesi)
