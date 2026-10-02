@@ -27,3 +27,4 @@ GitHub Pages kısıtı altında 8 farklı telefonun birbiriyle anlık (real-time
 - [x] **Adım 8:** GitHub Pages Dağıtım Hazırlığı (`README.md`, göreceli varlık yolları, sıfır-sunucu hazır mimari)
 - [x] **Adım 9:** Dinamik Oyuncu Sayısı ve Özel Rol Yapılandırması (7-8+ kişi desteği, lobi rol stepperları, canlı senkron)
 - [x] **Adım 10:** Gotik Koleksiyon Kartı Çerçeveleme Pipeline'ı (Tüm ham görsellerin katedral taş kemerleri, gargoyle heykelleri, yakut taşlar ve pirinç isim plaketleriyle 848x1264 koleksiyon kartlarına dönüştürülmesi)
+- [x] **Adım 11:** Kesintisiz Çok Oyunculu Senkronizasyon & Donma Önleyici Watchdog (Timestamp-based sayaç senkronizasyonu, host ekran kilidi toleransı, otomatik erken faz geçişi, doğrudan Admin yürütmesi ve Screen Wake Lock)

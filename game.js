@@ -148,11 +148,38 @@ class GameController {
         lastExecutedDay: null // { name, role } veya null
       },
       winner: null,
-      historyLogs: []
+      historyLogs: [],
+      phaseEndsAt: null
     };
 
     this.timerInterval = null;
+    this.clientTimerInterval = null;
+    this._phaseAutoAdvanceTimeout = null;
+    this._tickedSeconds = new Set();
+    this.wakeLock = null;
+
     this.initNetworkHooks();
+    this.requestWakeLock();
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        this.requestWakeLock();
+        if (this.state.phaseEndsAt && !this.network.isHost) {
+          this.startLocalTimerTicker(null, null);
+        }
+      }
+    });
+  }
+
+  async requestWakeLock() {
+    try {
+      if ('wakeLock' in navigator) {
+        this.wakeLock = await navigator.wakeLock.request('screen');
+        console.log('[WakeLock] Ekran açık tutuluyor.');
+      }
+    } catch (e) {
+      console.log('[WakeLock] Bilgi:', e.message);
+    }
   }
 
   initNetworkHooks() {
@@ -165,7 +192,7 @@ class GameController {
     };
 
     this.network.onActionReceived = (action) => {
-      if (this.network.isHost) {
+      if (this.network.isHost || this.me.isAdmin) {
         this.handleHostAction(action);
       }
     };
@@ -260,6 +287,23 @@ class GameController {
           this.state.nightActions.vampireVotes[playerId] = payload.targetId;
           this.evaluateVampireVotes();
           this.broadcastCurrentState();
+
+          // Erken Faz Geçişi: Yaşayan tüm vampirler oyunu verdi mi?
+          const aliveVamps = this.state.players.filter(p => p.role === 'VAMPIRE' && p.isAlive);
+          const allVampsVoted = aliveVamps.length > 0 && aliveVamps.every(v => !!this.state.nightActions.vampireVotes[v.id]);
+          if (allVampsVoted) {
+            const targetsChosen = aliveVamps.map(v => this.state.nightActions.vampireVotes[v.id]);
+            const consensus = targetsChosen.every(t => t === targetsChosen[0]);
+            if (consensus || aliveVamps.length === 1) {
+              if (this._phaseAutoAdvanceTimeout) clearTimeout(this._phaseAutoAdvanceTimeout);
+              this._phaseAutoAdvanceTimeout = setTimeout(() => {
+                if (this.state.phase === PHASES.NIGHT_VAMPIRE) {
+                  this.evaluateVampireVotes();
+                  this.startPhaseNightDoctor();
+                }
+              }, 1200);
+            }
+          }
         }
         break;
       }
@@ -268,6 +312,12 @@ class GameController {
         if (this.state.phase === PHASES.NIGHT_DOCTOR) {
           this.state.nightActions.doctorTarget = payload.targetId;
           this.broadcastCurrentState();
+          if (this._phaseAutoAdvanceTimeout) clearTimeout(this._phaseAutoAdvanceTimeout);
+          this._phaseAutoAdvanceTimeout = setTimeout(() => {
+            if (this.state.phase === PHASES.NIGHT_DOCTOR) {
+              this.startPhaseNightSeer();
+            }
+          }, 1200);
         }
         break;
       }
@@ -290,6 +340,12 @@ class GameController {
               result: result
             });
             this.broadcastCurrentState();
+            if (this._phaseAutoAdvanceTimeout) clearTimeout(this._phaseAutoAdvanceTimeout);
+            this._phaseAutoAdvanceTimeout = setTimeout(() => {
+              if (this.state.phase === PHASES.NIGHT_SEER) {
+                this.startPhaseDayDawn();
+              }
+            }, 2500);
           }
         }
         break;
@@ -336,60 +392,33 @@ class GameController {
 
       case 'ADMIN_FORCE_NEXT_PHASE': {
         const isSenderAdmin = action.isAdmin || (action.playerName || '').trim().toLowerCase() === 'canberk';
-        if (!isSenderAdmin) return;
-        this.addLog(`⚡ Admin (${action.playerName}) fazı ileri sardı.`);
-        clearInterval(this.timerInterval);
-
-        const curPhase = this.state.phase;
-        if (curPhase === PHASES.ROLE_REVEAL || curPhase === PHASES.NIGHT_INTRO) {
-          this.startPhaseNightVampire();
-        } else if (curPhase === PHASES.NIGHT_VAMPIRE) {
-          this.evaluateVampireVotes();
-          this.startPhaseNightDoctor();
-        } else if (curPhase === PHASES.NIGHT_DOCTOR) {
-          this.startPhaseNightSeer();
-        } else if (curPhase === PHASES.NIGHT_SEER) {
-          this.startPhaseDayDawn();
-        } else if (curPhase === PHASES.DAY_DAWN) {
-          this.startPhaseDayDiscussion();
-        } else if (curPhase === PHASES.DAY_DISCUSSION) {
-          this.startPhaseVoting();
-        } else if (curPhase === PHASES.DAY_VOTING) {
-          this.evaluateVotesAndExecute();
-        }
+        if (!isSenderAdmin && !this.network.isHost) return;
+        this.executeForceNextPhase(`Admin (${action.playerName || 'Canberk'})`);
         break;
       }
 
       case 'ADMIN_FORCE_VOTE': {
         const isSenderAdmin = action.isAdmin || (action.playerName || '').trim().toLowerCase() === 'canberk';
-        if (!isSenderAdmin) return;
+        if (!isSenderAdmin && !this.network.isHost) return;
         this.addLog(`⚡ Admin (${action.playerName}) tartışmayı bitirip oylamayı başlattı.`);
         clearInterval(this.timerInterval);
+        if (this._phaseAutoAdvanceTimeout) clearTimeout(this._phaseAutoAdvanceTimeout);
         this.startPhaseVoting();
         break;
       }
 
       case 'ADMIN_RESET_LOBBY': {
         const isSenderAdmin = action.isAdmin || (action.playerName || '').trim().toLowerCase() === 'canberk';
-        if (!isSenderAdmin) return;
-        this.addLog(`⚡ Admin (${action.playerName}) oyunu sıfırladı, lobiye dönüldü.`);
-        clearInterval(this.timerInterval);
-        this.state.phase = PHASES.LOBBY;
-        this.state.winner = null;
-        this.state.players.forEach(p => {
-          p.isReady = p.isBot ? true : false;
-          p.role = null;
-          p.isAlive = true;
-          p.confirmedRole = false;
-        });
-        this.broadcastCurrentState();
+        if (!isSenderAdmin && !this.network.isHost) return;
+        this.executeResetLobby(`Admin (${action.playerName || 'Canberk'})`);
         break;
       }
 
       case 'ADMIN_SET_VICTORY': {
         const isSenderAdmin = action.isAdmin || (action.playerName || '').trim().toLowerCase() === 'canberk';
-        if (!isSenderAdmin) return;
+        if (!isSenderAdmin && !this.network.isHost) return;
         clearInterval(this.timerInterval);
+        if (this._phaseAutoAdvanceTimeout) clearTimeout(this._phaseAutoAdvanceTimeout);
         const winTeam = payload.winner || 'good';
         this.state.phase = PHASES.GAME_OVER;
         this.state.winner = winTeam;
@@ -400,7 +429,7 @@ class GameController {
 
       case 'ADMIN_TOGGLE_LIFE': {
         const isSenderAdmin = action.isAdmin || (action.playerName || '').trim().toLowerCase() === 'canberk';
-        if (!isSenderAdmin) return;
+        if (!isSenderAdmin && !this.network.isHost) return;
         const target = this.state.players.find(p => p.id === payload.targetId);
         if (target) {
           target.isAlive = !target.isAlive;
@@ -444,7 +473,17 @@ class GameController {
 
     // Faz geçişinde ses veya haptik tepkisi
     if (prevPhase !== this.state.phase) {
+      this._tickedSeconds = new Set();
       this.onPhaseChanged(this.state.phase, prevPhase);
+    }
+
+    // İstemcilerde ve yerel ekranda timestamp tabanlı yerel sayaç başlat
+    if (this.state.phaseEndsAt && this.state.phase !== PHASES.LOBBY && this.state.phase !== PHASES.GAME_OVER) {
+      this.startLocalTimerTicker(null, () => {
+        if (this.network.isHost || this.me.isAdmin) {
+          this.advancePhaseTimeout();
+        }
+      });
     }
 
     this.renderUI();
@@ -530,38 +569,145 @@ class GameController {
     }
   }
 
-  // --- HOST DURUM MAKİNESİ VE ZAMANLAYICI ---
+  // --- HOST DURUM MAKİNESİ VE TIMESTAMP TABANLI ZAMANLAYICI ---
 
   startTimer(seconds, onTick, onComplete) {
     clearInterval(this.timerInterval);
+    if (this._phaseAutoAdvanceTimeout) {
+      clearTimeout(this._phaseAutoAdvanceTimeout);
+      this._phaseAutoAdvanceTimeout = null;
+    }
+
+    const now = Date.now();
+    this.state.phaseEndsAt = now + (seconds * 1000);
     this.state.timer = seconds;
     this.state.timerTotal = seconds;
-    if (this.network.isHost) this.broadcastCurrentState();
+    this._tickedSeconds = new Set();
+    this._warned60 = false;
+    this._warned15 = false;
 
-    this.timerInterval = setInterval(() => {
-      this.state.timer--;
+    // Faz başında tüm odaya anlık durum bildirimi yap
+    if (this.network.isHost || this.me.isAdmin) {
+      this.broadcastCurrentState();
+    }
 
-      // 60 sn ve 10 sn sesli hatırlatma
+    this.startLocalTimerTicker(onTick, onComplete);
+  }
+
+  startLocalTimerTicker(onTick, onComplete) {
+    if (this.clientTimerInterval) clearInterval(this.clientTimerInterval);
+    this._tickedSeconds = this._tickedSeconds || new Set();
+
+    this.clientTimerInterval = setInterval(() => {
+      if (!this.state.phaseEndsAt || this.state.phase === PHASES.LOBBY || this.state.phase === PHASES.GAME_OVER) {
+        clearInterval(this.clientTimerInterval);
+        return;
+      }
+
+      const remainingMs = this.state.phaseEndsAt - Date.now();
+      const remainingSec = Math.max(0, Math.ceil(remainingMs / 1000));
+      this.state.timer = remainingSec;
+
+      // 60 sn ve 15 sn sesli hatırlatma
       if (this.state.phase === PHASES.DAY_DISCUSSION) {
-        if (this.state.timer === 60) {
+        if (remainingSec === 60 && !this._warned60) {
+          this._warned60 = true;
           this.narrator.speak('Tartışma için son bir dakika.');
-        } else if (this.state.timer === 15) {
+        } else if (remainingSec === 15 && !this._warned15) {
+          this._warned15 = true;
           this.narrator.speak('Tartışma bitiyor, oylamaya hazırlanın.');
         }
       }
 
-      if (this.state.timer <= 5 && this.state.timer > 0) {
+      // Son 5 saniyede tık sesi
+      if (remainingSec <= 5 && remainingSec > 0 && !this._tickedSeconds.has(remainingSec)) {
+        this._tickedSeconds.add(remainingSec);
         this.sound.playTick();
       }
 
-      if (onTick) onTick(this.state.timer);
-      if (this.network.isHost) this.broadcastCurrentState();
-
-      if (this.state.timer <= 0) {
-        clearInterval(this.timerInterval);
-        if (onComplete) onComplete();
+      // Sayacı ekranda güncelle
+      const timerVal = document.getElementById('phase-timer-value');
+      if (timerVal) {
+        timerVal.textContent = this.formatTime(remainingSec);
       }
-    }, 1000);
+
+      if (onTick) onTick(remainingSec);
+
+      // Süre bittiğinde
+      if (remainingSec <= 0) {
+        clearInterval(this.clientTimerInterval);
+        this.clientTimerInterval = null;
+
+        if (this.network.isHost || this.me.isAdmin) {
+          if (onComplete) {
+            onComplete();
+          } else {
+            this.advancePhaseTimeout();
+          }
+        }
+      } else if (remainingMs < -2500) {
+        // GÜVENLİK SİGORTASI (WATCHDOG):
+        // Host telefonu kilitlendiyse veya koptuysa oyunu takılı bırakma
+        if (this.isHostFallbackCandidate()) {
+          console.warn('[Watchdog] Host yanıt vermedi, faz otomatik ilerletiliyor...');
+          this.advancePhaseTimeout();
+        }
+      }
+    }, 500);
+  }
+
+  isHostFallbackCandidate() {
+    if (this.network.isHost || this.me.isAdmin) return true;
+    const realPlayers = this.state.players.filter(p => !p.isBot);
+    return realPlayers.length > 0 && realPlayers[0].id === this.me.id;
+  }
+
+  advancePhaseTimeout() {
+    const curPhase = this.state.phase;
+    console.log(`[Phase Advance] Faz süresi tamamlandı, ilerleniyor: ${curPhase}`);
+
+    if (curPhase === PHASES.ROLE_REVEAL || curPhase === PHASES.NIGHT_INTRO) {
+      this.startPhaseNightVampire();
+    } else if (curPhase === PHASES.NIGHT_VAMPIRE) {
+      this.evaluateVampireVotes();
+      this.startPhaseNightDoctor();
+    } else if (curPhase === PHASES.NIGHT_DOCTOR) {
+      this.startPhaseNightSeer();
+    } else if (curPhase === PHASES.NIGHT_SEER) {
+      this.startPhaseDayDawn();
+    } else if (curPhase === PHASES.DAY_DAWN) {
+      this.startPhaseDayDiscussion();
+    } else if (curPhase === PHASES.DAY_DISCUSSION) {
+      this.startPhaseVoting();
+    } else if (curPhase === PHASES.DAY_VOTING) {
+      this.evaluateVotesAndExecute();
+    } else if (curPhase === PHASES.DAY_EXECUTION) {
+      this.startPhaseNightIntro();
+    }
+  }
+
+  executeForceNextPhase(actorName = 'Admin') {
+    this.addLog(`⚡ ${actorName} fazı ileri sardı.`);
+    clearInterval(this.timerInterval);
+    if (this.clientTimerInterval) clearInterval(this.clientTimerInterval);
+    if (this._phaseAutoAdvanceTimeout) clearTimeout(this._phaseAutoAdvanceTimeout);
+    this.advancePhaseTimeout();
+  }
+
+  executeResetLobby(actorName = 'Admin') {
+    this.addLog(`⚡ ${actorName} oyunu sıfırladı, lobiye dönüldü.`);
+    clearInterval(this.timerInterval);
+    if (this.clientTimerInterval) clearInterval(this.clientTimerInterval);
+    if (this._phaseAutoAdvanceTimeout) clearTimeout(this._phaseAutoAdvanceTimeout);
+    this.state.phase = PHASES.LOBBY;
+    this.state.winner = null;
+    this.state.players.forEach(p => {
+      p.isReady = p.isBot ? true : false;
+      p.role = null;
+      p.isAlive = true;
+      p.confirmedRole = false;
+    });
+    this.broadcastCurrentState();
   }
 
   // Oyunu Başlat (Host veya Canberk Admin)
@@ -1083,36 +1229,74 @@ class GameController {
   // --- CANBERK ADMİN YARDIMCI METODLARI ---
 
   adminForceNextPhase() {
-    this.network.sendAction('ADMIN_FORCE_NEXT_PHASE');
     this.haptic.confirmAction();
+    if (this.network.isHost || this.me.isAdmin) {
+      this.executeForceNextPhase(`Admin (${this.me.name || 'Canberk'})`);
+    } else {
+      this.network.sendAction('ADMIN_FORCE_NEXT_PHASE');
+    }
   }
 
   adminForceVote() {
-    this.network.sendAction('ADMIN_FORCE_VOTE');
     this.haptic.confirmAction();
+    if (this.network.isHost || this.me.isAdmin) {
+      this.addLog(`⚡ Admin (${this.me.name || 'Canberk'}) tartışmayı bitirip oylamayı başlattı.`);
+      clearInterval(this.timerInterval);
+      if (this.clientTimerInterval) clearInterval(this.clientTimerInterval);
+      if (this._phaseAutoAdvanceTimeout) clearTimeout(this._phaseAutoAdvanceTimeout);
+      this.startPhaseVoting();
+    } else {
+      this.network.sendAction('ADMIN_FORCE_VOTE');
+    }
   }
 
   adminResetLobby() {
     if (confirm('Oyunu sıfırlayıp herkesi lobiye döndürmek istediğinize emin misiniz?')) {
-      this.network.sendAction('ADMIN_RESET_LOBBY');
       this.haptic.confirmAction();
       const modal = document.getElementById('admin-panel-modal');
       if (modal) modal.style.display = 'none';
+
+      if (this.network.isHost || this.me.isAdmin) {
+        this.executeResetLobby(`Admin (${this.me.name || 'Canberk'})`);
+      } else {
+        this.network.sendAction('ADMIN_RESET_LOBBY');
+      }
     }
   }
 
   adminSetVictory(team) {
     if (confirm(`Oyunu ${team === 'evil' ? 'VAMPİRLER' : 'KÖYLÜLER'} lehine bitirmek istediğinize emin misiniz?`)) {
-      this.network.sendAction('ADMIN_SET_VICTORY', { winner: team });
       this.haptic.confirmAction();
       const modal = document.getElementById('admin-panel-modal');
       if (modal) modal.style.display = 'none';
+
+      if (this.network.isHost || this.me.isAdmin) {
+        clearInterval(this.timerInterval);
+        if (this.clientTimerInterval) clearInterval(this.clientTimerInterval);
+        if (this._phaseAutoAdvanceTimeout) clearTimeout(this._phaseAutoAdvanceTimeout);
+        this.state.phase = PHASES.GAME_OVER;
+        this.state.winner = team;
+        this.addLog(`⚡ Admin (${this.me.name || 'Canberk'}) oyunu sonlandırdı: ${team === 'evil' ? 'Vampirler' : 'Köylüler'} kazandı!`);
+        this.broadcastCurrentState();
+      } else {
+        this.network.sendAction('ADMIN_SET_VICTORY', { winner: team });
+      }
     }
   }
 
   adminToggleLife(targetId) {
-    this.network.sendAction('ADMIN_TOGGLE_LIFE', { targetId });
     this.haptic.confirmAction();
+    if (this.network.isHost || this.me.isAdmin) {
+      const target = this.state.players.find(p => p.id === targetId);
+      if (target) {
+        target.isAlive = !target.isAlive;
+        this.addLog(`⚡ Admin (${this.me.name || 'Canberk'}) ${target.name}'i ${target.isAlive ? 'diriltti' : 'öldürdü'}.`);
+        this.checkVictory();
+        this.broadcastCurrentState();
+      }
+    } else {
+      this.network.sendAction('ADMIN_TOGGLE_LIFE', { targetId });
+    }
   }
 
   adminToggleGodView() {
@@ -1396,19 +1580,33 @@ class GameController {
       }
 
       // Vampir Ekranı
-      const otherVamp = this.state.players.find(p => p.role === 'VAMPIRE' && p.id !== this.me.id);
+      const otherVamps = this.state.players.filter(p => p.role === 'VAMPIRE' && p.id !== this.me.id);
+      const otherVamp = otherVamps.length > 0 ? otherVamps[0] : null;
       const partnerVoteId = otherVamp ? this.state.nightActions.vampireVotes[otherVamp.id] : null;
       const partnerTarget = partnerVoteId ? this.state.players.find(p => p.id === partnerVoteId) : null;
       const myVoteId = this.state.nightActions.vampireVotes[this.me.id];
 
-      const targets = this.state.players.filter(p => p.isAlive && p.role !== 'VAMPIRE');
+      // Kurban listesi: sadece yaşayan masumlar (kendisi ve diğer vampirler HARİÇ!)
+      const targets = this.state.players.filter(p => p.isAlive && p.role !== 'VAMPIRE' && p.id !== this.me.id);
 
       contentArea.innerHTML = `
         <div class="vampire-action-panel">
           <div class="vampire-partner-badge">
-            🧛 Ortağınız: <strong>${otherVamp ? otherVamp.name : 'Tek Vampirsiniz'}</strong>
-            ${partnerTarget ? `<span class="partner-choice">Ortağın tercihi: <em>${partnerTarget.name}</em></span>` : '<span class="partner-choice">Ortağın henüz seçmedi</span>'}
+            ${otherVamp ? `
+              🧛 Ortağınız: <strong>${otherVamp.name}</strong>
+              ${partnerTarget ? `<span class="partner-choice">Ortağın tercihi: <em>${partnerTarget.name}</em></span>` : '<span class="partner-choice">Ortağın henüz seçmedi</span>'}
+            ` : `
+              🧛 <strong>Tek Vampirsiniz</strong>
+              <span class="partner-choice" style="color:var(--color-gold);">Köydeki av tamamen sizin elinizde!</span>
+            `}
           </div>
+
+          ${myVoteId ? `
+            <div class="vote-locked-banner" style="background:rgba(225,29,72,0.18); border:1px solid #e11d48; border-radius:8px; padding:10px 14px; margin-bottom:14px; text-align:center; font-size:13px;">
+              🩸 Seçiminiz yapıldı: <strong>${this.state.players.find(p=>p.id===myVoteId)?.name || ''}</strong>. 
+              ${otherVamp ? (partnerVoteId ? (partnerVoteId === myVoteId ? '✓ Ortakla anlaştınız! Faz otomatik ilerletiliyor...' : '⏳ Ortağınızla hedefleriniz farklı.') : 'Ortağınızın seçimi bekleniyor...') : '✓ Kurban kilitlendi, faz otomatik ilerletiliyor...'}
+            </div>
+          ` : ''}
 
           <h3 class="panel-section-title">Kurbanınızı Seçin:</h3>
           <div class="player-selection-grid">
@@ -1419,8 +1617,8 @@ class GameController {
                 <button class="target-card ${isSelectedByMe ? 'selected-by-me' : ''} ${isSelectedByPartner ? 'selected-by-partner' : ''}" onclick="window.gameController.voteVampireTarget('${t.id}')">
                   <div class="target-avatar">${t.name.charAt(0)}</div>
                   <div class="target-name">${t.name}</div>
-                  ${isSelectedByPartner ? '<span class="partner-badge">🧛 Ortak</span>' : ''}
-                  ${isSelectedByMe ? '<span class="my-badge">✓ Siz</span>' : ''}
+                  ${isSelectedByPartner ? '<span class="partner-badge">🧛 Ortak Seçimi</span>' : ''}
+                  ${isSelectedByMe ? '<span class="my-badge">✓ Seçiminiz</span>' : ''}
                 </button>
               `;
             }).join('')}

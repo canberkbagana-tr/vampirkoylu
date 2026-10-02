@@ -85,3 +85,20 @@ Tüm önemli değişiklikler ve geliştirme aşamaları bu dosyada kronolojik ol
     - Kart görünümü 2:3 en-boy oranına (`270px x 402px`) kilitlendi, çerçevelerin hiçbir detayı kırpılmadan mobilde devasa kalitede görünmesi sağlandı.
     - Rol açıklama ve talimatları kartın altındaki cam gotik bilgi kutusuna (`.role-info-card`) taşındı.
 
+## [v0.8.0] - 2026-10-02
+### Eklendi & Düzeltildi
+- **Zamanlayıcı Donması ve Faz Takılması Hatası Kökten Çözüldü:**
+  - **Sorun:** Host telefonunun ekranı kilitlendiğinde veya MQTT paketleri geciktiğinde sayaç istemcilerde `0:06` gibi değerlerde donuyordu ve oyun ilerlemiyordu.
+  - **Çözüm (Timestamp-Based Senkronizasyon):** Sayaç artık her saniye MQTT paketi göndermek yerine tek bir bitiş zaman damgası (`phaseEndsAt`) üzerinden çalıştırıldı. Her telefon kendi yerel saatine göre senkronize, akıcı ve pürüzsüz geri sayım yapar.
+  - **Gözcü Güvenlik Sigortası (Watchdog):** Host telefonu kapansa veya uyusa dahi süre bitiminde (+2.5 sn tolerans) odadaki Admin (Canberk) veya ilk aktif oyuncu fazı otomatik olarak ileri alır. Oyunun bir daha asla takılması mümkün değildir.
+- **Erken Faz Geçişi (Aksiyon Tamamlandığında Anında İlerleme):**
+  - Vampirler kurbanını seçtiğinde (veya tek vampir kurbanına tıkladığında) 25 saniye boşuna bekleme zorunluluğu kaldırıldı; 1.2 saniye içinde otomatik olarak Doktor fazına geçilir.
+  - Doktor ve Kahin seçim yaptığında da aynı şekilde beklemeden bir sonraki faza akılır.
+- **Canberk Admin Kesintisiz Yetki (Direct Execution):**
+  - Canberk Admin panelinden `⏭️ Fazı Zorla İleri Al`, `⚖️ Oylamaya Zorla` veya `🔄 Oyunu Sıfırla` butonlarına bastığında, odayı kuran kişi uyumuş veya kilitlenmiş olsa dahi yetki anında yerel olarak yürütülür ve tüm odadaki oyunculara yayınlanır.
+- **Screen WakeLock API (Ekranın Kapanmasını Önleme):**
+  - Mobilde oyun boyunca ekranın otomatik kararmasını ve kilitlenmesini engelleyen WakeLock eklendi.
+- **Arayüz Karışıklığı Düzeltildi:**
+  - Vampir ekranında seçilen kurbanda kafa karıştıran `✓ Siz` ibaresi `✓ Seçiminiz` olarak değiştirildi.
+  - Tek vampir kalındığında "Ortağın henüz seçmedi" çelişkisi kaldırıldı, "Tek Vampirsiniz (Köydeki tüm avlar sizin elinizde!)" bilgilendirmesi ve kilitlenme onay kutusu eklendi.
+

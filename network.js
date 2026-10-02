@@ -90,8 +90,8 @@ class NetworkEngine {
           if (err) console.error('[Network] Subscribe hatası:', err);
         });
 
-        // Host ise oyuncu aksiyonlarını dinler
-        if (this.isHost) {
+        // Host veya Canberk Admin ise oyuncu aksiyonlarını dinler
+        if (this.isHost || this.isAdmin) {
           const hostActionsTopic = `vampir-sapanca/${this.roomCode}/host_actions`;
           this.client.subscribe(hostActionsTopic);
         }
@@ -140,7 +140,7 @@ class NetworkEngine {
       if (this.onStateReceived) {
         this.onStateReceived(data);
       }
-    } else if (topic.endsWith('/host_actions') && this.isHost) {
+    } else if (topic.endsWith('/host_actions') && (this.isHost || this.isAdmin)) {
       if (this.onActionReceived) {
         this.onActionReceived(data);
       }
