@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#090a0f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Vampir Köylü - Sapanca Edition</title>
+
+  <!-- Google Fonts: Gotik Serif & Modern Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Arka Plan Sis & Atmosfer -->
+  <div class="background-ambient">
+    <div class="mist-overlay"></div>
+    <div class="vignette-overlay"></div>
+  </div>
+
+  <div id="app" class="app-container">
+    <!-- Üst Bar (Header) -->
+    <header class="app-header">
+      <div class="brand">
+        <span class="blood-moon-icon">🩸</span>
+        <div class="brand-text">
+          <h1>VAMPİR KÖYLÜ</h1>
+          <span class="sub-text">SAPANCA EDİTİON</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <span id="connection-badge" class="status-pill offline">Çevrimdışı</span>
+        <button id="btn-sound-toggle" class="icon-btn" title="Sesi Aç/Kapat" aria-label="Sesi Aç/Kapat">
+          <span id="sound-icon">🔊</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- GİRİŞ & ODA KATILMA EKRANI (LOBBY ÖNCESİ) -->
+    <section id="view-entry" class="view-panel active">
+      <div class="splash-card">
+        <div class="splash-hero-banner">
+          <img src="assets/splash.jpg" alt="Sapanca Vampir Köyü" class="splash-img" />
+          <div class="splash-glow"></div>
+        </div>
+        <div class="splash-content">
+          <h2 class="cinzel-title">Göl Kenarında Karanlık Çöküyor...</h2>
+          <p class="flavor-text">8 kişi toplandınız ama kimse moderatör olmak istemiyor mu? Artık 8'iniz birden oynayabilirsiniz. Yapay zeka sesli moderatör köyü yönetecek.</p>
+
+          <div class="entry-form">
+            <div class="input-group">
+              <label for="input-player-name">Oyuncu Adınız:</label>
+              <input type="text" id="input-player-name" placeholder="Örn: Can, Zeynep, Ahmet" maxlength="15" autocomplete="off" />
+            </div>
+
+            <div class="action-buttons-group">
+              <button id="btn-create-room" class="btn-primary">
+                👑 YENİ ODA KUR (Host Ol)
+              </button>
+
+              <div class="join-divider"><span>VEYA BİR ODAYA KATIL</span></div>
+
+              <div class="join-row">
+                <input type="text" id="input-room-code" placeholder="4 Haneli Kod (Örn: SPNC)" maxlength="6" />
+                <button id="btn-join-room" class="btn-secondary">KATIL</button>
+              </div>
+
+              <div class="test-divider"><span>TEST & SİMÜLASYON</span></div>
+              <button id="btn-start-test-simulation" class="btn-ghost">
+                🤖 8 Kişilik Simülasyon Modu (7 Bot ile Hemen Oyna)
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- LOBİ EKRANI -->
+    <section id="view-lobby" class="view-panel" style="display:none;">
+      <div class="lobby-header-card">
+        <div class="room-code-badge">
+          <span class="label">ODA KODU:</span>
+          <span id="lobby-room-code" class="code">----</span>
+          <button id="btn-copy-link" class="btn-copy" title="Katılım Linkini Kopyala">📋</button>
+        </div>
+        <div id="player-count-display" class="player-count-pill">1 / 8 Oyuncu</div>
+      </div>
+
+      <!-- QR Kod Katılım Alanı (Sapanca'da diğer telefonların hızlıca kamerayla okuması için) -->
+      <div class="qr-share-card">
+        <div class="qr-wrapper">
+          <div id="lobby-qrcode"></div>
+        </div>
+        <div class="qr-instruction">
+          <strong>Arkadaşlarına Okut:</strong>
+          <small>Telefon kameralarını açıp bu kodu okutarak odaya saniyeler içinde katılabilirler.</small>
+        </div>
+      </div>
+
+      <!-- Oyuncu Listesi -->
+      <div class="roster-section">
+        <h3>LOBİDEKİ OYUNCULAR</h3>
+        <div id="lobby-player-list" class="lobby-grid">
+          <!-- Dinamik Oyuncular -->
+        </div>
+      </div>
+
+      <!-- Lobi Alt Bar (Hazır & Başlat) -->
+      <div class="lobby-bottom-bar">
+        <button id="btn-lobby-ready" class="btn-primary">HAZIRIM</button>
+
+        <div id="host-controls" class="host-controls" style="display:none;">
+          <button id="btn-host-add-bots" class="btn-ghost-sm">+ Kalanı Botla Doldur (8'e Tamamla)</button>
+          <button id="btn-host-start-game" class="btn-accent">OYUNU BAŞLAT ⚔️</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- OYUN ALANI (FAZLAR) -->
+    <section id="view-game" class="view-panel" style="display:none;">
+      <div class="game-top-bar">
+        <div class="phase-info">
+          <h2 id="phase-title">GECE FAZI</h2>
+          <span id="phase-subtitle">Köy uykuya dalıyor...</span>
+        </div>
+        <div class="phase-timer-pill">
+          <span class="timer-icon">⏳</span>
+          <span id="phase-timer-value">02:00</span>
+        </div>
+      </div>
+
+      <div class="my-role-badge-bar">
+        <span class="label">KİMLİĞİNİZ:</span>
+        <div id="my-role-pill" class="role-pill">Köylü | Hayatta</div>
+      </div>
+
+      <!-- Dinamik Faz İçeriği (game.js tarafından doldurulur) -->
+      <div id="game-phase-content" class="game-phase-content">
+        <!-- Rol Reveal / Gece Seçimi / Gündüz Tartışma / Oylama -->
+      </div>
+    </section>
+
+    <!-- OYUN SONU EKRANI -->
+    <section id="view-game-over" class="view-panel" style="display:none;">
+      <div class="game-over-banner">
+        <h1 id="game-over-title">KÖYLÜLER KAZANDI!</h1>
+        <p id="game-over-subtitle">Tüm vampirler köy meydanında asıldı.</p>
+      </div>
+
+      <div id="game-over-roster" class="game-over-roster">
+        <!-- Tüm rollerin listesi -->
+      </div>
+
+      <div class="game-over-actions">
+        <button id="btn-game-over-rematch" class="btn-primary">TEKRAR OYNA (Yeni Tur) 🔄</button>
+      </div>
+    </section>
+
+    <!-- Canlı Olay Günlüğü (Drawer/Accordion) -->
+    <footer class="app-footer">
+      <details class="logs-accordion">
+        <summary>📜 Köy Günlüğü & Olaylar (<span id="log-count">0</span>)</summary>
+        <div id="game-logs-list" class="logs-content">
+          <div class="log-entry">Oyun hazırlandı.</div>
+        </div>
+      </details>
+    </footer>
+
+    <!-- Canberk Admin Kısayol Butonu -->
+    <button id="btn-admin-floating" class="admin-floating-btn" style="display:none;" title="Admin Paneli">
+      <span class="bolt">⚡</span>
+      <span class="label">ADMİN</span>
+    </button>
+
+    <!-- Canberk Admin Kontrol Modalı -->
+    <div id="admin-panel-modal" class="admin-modal" style="display:none;">
+      <div class="admin-modal-backdrop" id="admin-modal-backdrop"></div>
+      <div class="admin-modal-card">
+        <div class="admin-modal-header">
+          <div class="title">
+            <span class="bolt">⚡</span>
+            <h3>CANBERK ADMİN KONTROLÜ</h3>
+          </div>
+          <button id="btn-close-admin-modal" class="btn-close-modal">✕</button>
+        </div>
+
+        <div class="admin-modal-body">
+          <div class="admin-phase-indicator">
+            Mevcut Faz: <strong id="admin-current-phase">LOBBY</strong>
+          </div>
+
+          <div class="admin-action-grid">
+            <button class="admin-btn" onclick="window.gameController.adminForceNextPhase()">
+              ⏭️ Fazı Zorla İleri Al
+            </button>
+            <button class="admin-btn" onclick="window.gameController.adminForceVote()">
+              ⚖️ Oylamaya Zorla
+            </button>
+            <button id="btn-admin-god-view" class="admin-btn" onclick="window.gameController.adminToggleGodView()">
+              👁️ Röntgenci Modu: KAPALI
+            </button>
+            <button class="admin-btn btn-danger" onclick="window.gameController.adminResetLobby()">
+              🔄 Oyunu Sıfırla (Lobiye Dön)
+            </button>
+          </div>
+
+          <div class="admin-section-divider"><span>HIZLI ZAFER</span></div>
+          <div class="admin-victory-actions">
+            <button class="admin-btn btn-good" onclick="window.gameController.adminSetVictory('good')">
+              ☀️ Köylüleri Kazandır
+            </button>
+            <button class="admin-btn btn-evil" onclick="window.gameController.adminSetVictory('evil')">
+              🧛 Vampirleri Kazandır
+            </button>
+          </div>
+
+          <div class="admin-section-divider"><span>OYUNCU HAYAT KONTROLÜ</span></div>
+          <div id="admin-players-control-list" class="admin-players-list">
+            <!-- Dinamik oyuncu listesi -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Yerel Kütüphaneler (Harici internet kesintilerine karşı lokal olarak projede tutulur) -->
+  <script src="libs/qrcode.min.js"></script>
+  <script src="libs/mqtt.min.js"></script>
+
+  <!-- Proje Kodları -->
+  <script src="moderator.js"></script>
+  <script src="network.js"></script>
+  <script src="game.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
