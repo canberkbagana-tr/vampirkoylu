@@ -7,16 +7,26 @@ Bu projenin amacı, **8 kişinin tamamının oyuncu olarak katılabileceği**, f
 
 ---
 
-## 2. Temel Roller (8 Kişilik Optimize Dağılım)
-Klasik 8 kişilik dağılımda denge çok hassastır:
-* **2x Vampir:** Gece uyanır, birbirlerini kırmızı parlama ile görürler. Ortak bir kurban oylarlar.
-* **1x Doktor:** Gece uyanır, 1 kişiyi ölümden kurtarır (üst üste aynı kişiyi koruyamaz).
-* **1x Kahin (Gözcü):** Gece uyanır, 1 kişinin kimliğini sorgular (Sistem gizlice 'Vampir' veya 'Masum' gösterir).
-* **4x Benzersiz Köylü (Meme Kartları):** Her köylü oyuncusu farklı ve eğlenceli bir karta sahiptir, aynı kart iki kişiye gitmez:
-  * **Köylü 1 (Halay Başı Dayı):** Şalvarlı düğün köylüsü (`koylu1.png`).
-  * **Köylü 2 (Köyde Eylem Var!):** Hakkını savunan eylemci köylü (`koylu2.png`).
-  * **Köylü 3 (Su Bulan Dayı):** Dut dalıyla noktasıyla su arayan köylü (`koylu3.png`).
-  * **Köylü 4 (Bilge Kasketli):** Bıyık altından gülen sakin köylü (`koylu4.png`).
+## 2. Dinamik Rol Sistemi (Kişi Sayısına Göre Değişken Denge)
+Oyuncu sayısındaki değişimlere (örneğin 8'den 7'ye düşülmesi veya artması) göre roller otomatik ve matematiksel olarak dengelenir:
+
+* **7 Kişilik Optimize Denge (Mevcut Grup):**
+  * **2x Vampir:** Gece uyanır, birbirlerini kırmızı parlama ile görür ve ortak kurban seçerler.
+  * **1x Doktor:** Gece uyanır, 1 kişiyi ölümden kurtarır (üst üste aynı kişiyi koruyamaz).
+  * **1x Kahin (Gözcü):** Gece uyanır, 1 kişinin kimliğini sorgular.
+  * **3x Benzersiz Köylü (Meme Kartları):** 4 meme kartı arasından rastgele seçilen 3 farklı köylü (aynı kart tekrarlanmaz).
+
+* **Dinamik Rol Skalası (4 - 12+ Kişi):**
+  * **4 Kişi:** 1 Vampir, 1 Doktor, 2 Köylü
+  * **5 Kişi:** 1 Vampir, 1 Doktor, 1 Kahin, 2 Köylü
+  * **6 Kişi:** 1 Vampir, 1 Doktor, 1 Kahin, 3 Köylü
+  * **7 Kişi:** 2 Vampir, 1 Doktor, 1 Kahin, 3 Köylü
+  * **8 Kişi:** 2 Vampir, 1 Doktor, 1 Kahin, 4 Köylü (4 meme kartının tamamı)
+  * **9 Kişi:** 2 Vampir, 1 Doktor, 1 Kahin, 5 Köylü
+  * **10+ Kişi:** 3 Vampir, 1 Doktor, 1 Kahin, (N - 5) Köylü
+
+* **Lobi Canlı Rol Önizlemesi:** Odaya her yeni arkadaş katıldığında lobi üstünde anlık rol dağılımı rozetlerle (`🧛 2 Vampir`, `💉 1 Doktor` vb.) canlı gösterilir.
+
 
 ---
 

@@ -553,7 +553,7 @@ class GameController {
 
     const count = this.state.players.length;
     if (count < 4) {
-      alert('Oyunu başlatmak için en az 4 oyuncu gereklidir (İdeal olan 8 oyuncudur).');
+      alert('Oyunu başlatmak için en az 4 oyuncu gereklidir (Grup büyüklüğüne göre roller otomatik dengelenir).');
       return;
     }
 
@@ -576,27 +576,62 @@ class GameController {
     this.broadcastCurrentState();
   }
 
-  generateRoleDeck(playerCount) {
-    let deck = [];
-    if (playerCount === 8) {
-      // 8 kişilik oyunda 4 köylünün her birine KESİNLİKLE farklı bir meme kartı gider!
-      deck = ['VAMPIRE', 'VAMPIRE', 'DOCTOR', 'SEER', 'VILLAGER_1', 'VILLAGER_2', 'VILLAGER_3', 'VILLAGER_4'];
-    } else {
-      // Dinamik dağılım: Oyuncuların ~%25'i vampir, 1 doktor, 1 kahin, kalanı köylü
-      const vampCount = Math.max(1, Math.floor(playerCount * 0.25));
-      for (let i = 0; i < vampCount; i++) deck.push('VAMPIRE');
-      deck.push('DOCTOR');
-      deck.push('SEER');
+  // Kişi sayısına göre dinamik rol dengesi hesaplama
+  getDynamicRoleComposition(playerCount) {
+    const total = Math.max(1, playerCount);
+    let vampires = 2;
+    let doctors = 1;
+    let seers = 1;
 
-      // Köylü meme kartları havuzu (farklı kartlar dağıtılır)
-      const villagerPool = ['VILLAGER_1', 'VILLAGER_2', 'VILLAGER_3', 'VILLAGER_4'];
-      this.shuffle(villagerPool);
-      let vIdx = 0;
-      while (deck.length < playerCount) {
-        deck.push(villagerPool[vIdx % villagerPool.length]);
-        vIdx++;
+    if (total <= 4) {
+      vampires = 1;
+      doctors = 1;
+      seers = 0;
+    } else if (total <= 6) {
+      vampires = 1;
+      doctors = 1;
+      seers = 1;
+    } else if (total <= 9) {
+      // 7, 8, 9 kişilik gruplarda ideal denge: 2 Vampir, 1 Doktor, 1 Kahin
+      vampires = 2;
+      doctors = 1;
+      seers = 1;
+    } else {
+      // 10 ve üzeri kalabalık gruplar için 3 vampir
+      vampires = Math.max(3, Math.floor(total * 0.3));
+      doctors = 1;
+      seers = 1;
+    }
+
+    const villagers = Math.max(1, total - (vampires + doctors + seers));
+    return { vampires, doctors, seers, villagers, total };
+  }
+
+  generateRoleDeck(playerCount) {
+    const comp = this.getDynamicRoleComposition(playerCount);
+    let deck = [];
+
+    // Vampirler
+    for (let i = 0; i < comp.vampires; i++) deck.push('VAMPIRE');
+    // Doktor
+    for (let i = 0; i < comp.doctors; i++) deck.push('DOCTOR');
+    // Kahin
+    for (let i = 0; i < comp.seers; i++) deck.push('SEER');
+
+    // 4 Benzersiz Meme Köylü Kartı Havuzu
+    const allMemeVillagers = ['VILLAGER_1', 'VILLAGER_2', 'VILLAGER_3', 'VILLAGER_4'];
+    const shuffledMemes = [...allMemeVillagers];
+    this.shuffle(shuffledMemes);
+
+    // Her köylüye farklı meme kartı ata (4'e kadar kesinlikle benzersiz)
+    for (let i = 0; i < comp.villagers; i++) {
+      if (i < shuffledMemes.length) {
+        deck.push(shuffledMemes[i]);
+      } else {
+        deck.push(shuffledMemes[i % shuffledMemes.length]);
       }
     }
+
     return deck;
   }
 
@@ -837,8 +872,8 @@ class GameController {
 
   // --- BOT SIMÜLASYON YÖNTEMLERİ ---
 
-  addTestBots(targetTotal = 8) {
-    const botNames = ['Zeynep', 'Ahmet', 'Mehmet', 'Ayşe', 'Elif', 'Can', 'Burak', 'Selin'];
+  addTestBots(targetTotal = 7) {
+    const botNames = ['Zeynep', 'Ahmet', 'Mehmet', 'Ayşe', 'Elif', 'Burak', 'Selin', 'Can'];
     let nameIdx = 0;
     while (this.state.players.length < targetTotal) {
       const name = botNames[nameIdx] || `Oyuncu ${this.state.players.length + 1}`;
@@ -1041,8 +1076,23 @@ class GameController {
     if (!listEl) return;
     listEl.innerHTML = '';
 
+    const pCount = this.state.players.length;
     const countEl = document.getElementById('player-count-display');
-    if (countEl) countEl.textContent = `${this.state.players.length} / 8 Oyuncu`;
+    if (countEl) {
+      countEl.textContent = `${pCount} Oyuncu${pCount < 4 ? ' (Min 4)' : ''}`;
+    }
+
+    // Dinamik Rol Önizleme Çubuğu
+    const comp = this.getDynamicRoleComposition(pCount || 1);
+    const previewEl = document.getElementById('lobby-role-preview');
+    if (previewEl) {
+      previewEl.innerHTML = `
+        <span class="preview-badge vamp">🧛 ${comp.vampires} Vampir</span>
+        <span class="preview-badge doc">💉 ${comp.doctors} Doktor</span>
+        ${comp.seers > 0 ? `<span class="preview-badge seer">🔮 ${comp.seers} Kahin</span>` : ''}
+        <span class="preview-badge vill">🧑‍🌾 ${comp.villagers} Köylü</span>
+      `;
+    }
 
     this.state.players.forEach(p => {
       const isMe = p.id === this.me.id;

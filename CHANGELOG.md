@@ -46,3 +46,13 @@ Tüm önemli değişiklikler ve geliştirme aşamaları bu dosyada kronolojik ol
 - **GitHub Repository Senkronizasyonu:**
   - Proje doğrudan [canberkbagana-tr/vampirkoylu](https://github.com/canberkbagana-tr/vampirkoylu) reposuna pushlandı.
 
+## [v0.5.0] - 2026-10-02
+### Eklendi & Değiştirildi
+- **Dinamik Kişi Sayısı & 7 Kişilik Dengeleme:**
+  - Sabit 8 kişi kuralı kaldırıldı; 4 ile 12+ oyuncu arasındaki her grup büyüklüğü için otomatik matematiksel dengeleme eklendi (`getDynamicRoleComposition`).
+  - **7 Kişilik Optimize Denge:** 2 Vampir, 1 Doktor, 1 Kahin, 3 Benzersiz Meme Köylüsü (`koylu1-3`). Vampirlerin gece ortak kurban seçme mekaniği ve tansiyonu 7 kişide tam korundu.
+- **Lobi Dinamik Rol Dağılım Önizleme Çubuğu (`#lobby-role-preview`):**
+  - Odaya her yeni arkadaş katıldığında lobi ekranında rollerin nasıl dağıtılacağı canlı rozetlerle (`🧛 2 Vampir`, `💉 1 Doktor`, `🔮 1 Kahin`, `🧑‍🌾 3 Köylü`) anında gösterilir.
+- **Meme Kartları Tekilleştirilmiş Dağıtımı:**
+  - 7 kişilik oyunda 4 köylü meme kartı havuzundan rastgele 3 tanesi seçilerek 3 köylüye atanır; aynı kart asla iki kişiye verilmez.
+
