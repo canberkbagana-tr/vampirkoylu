@@ -35,5 +35,14 @@ Tüm önemli değişiklikler ve geliştirme aşamaları bu dosyada kronolojik ol
   - **🔄 Oyunu Sıfırla (Lobiye Dön):** Acil durumlarda oyunu lobiye çekme yetkisi.
   - **🏆 Hızlı Zafer:** Oyunu anında Köylüler veya Vampirler lehine bitirme yetkisi.
   - **💀 Canlı/Ölü Kontrolü:** İstenen oyuncuyu tek tıkla öldürme veya diriltme yetkisi.
-- **GitHub Pages Hazırlığı:** Tüm bağımlılıklar yerel dosyalara bağlandı, göreceli dosya yolları sağlandı.
+## [v0.4.0] - 2026-10-02
+### Eklendi & Düzeltildi
+- **Latince/Yabancı Ses Telaffuz Hatası Giderildi:**
+  - Cihazda Türkçe TTS ses motoru bulunmadığında (örneğin İngilizce Windows veya Türkçe dil paketi yüklü olmayan sistemler) varsayılan İngilizce sesin Türkçeyi Latince dua gibi ("jee-see all-doo...") okuması engellendi.
+  - Sadece gerçek Türkçe ses motorları (`tr-TR`, `Google Türkçe`, `Tolga`, `Yelda`, `Cem`) varsa sesli okuma yapılır.
+- **Canlı Gotik Moderatör Altyazı Barı (`#narrator-banner`):**
+  - Moderatörün tüm konuşmaları ekranda altın yaldızlı, gölgeli gotik bir altyazı kartı olarak canlı gösterilir.
+  - Sapanca'da gürültülü ortamda veya telefon sessizde olsa bile tüm oyuncular moderatörün anonslarını senkronize şekilde okuyabilir.
+- **GitHub Repository Senkronizasyonu:**
+  - Proje doğrudan [canberkbagana-tr/vampirkoylu](https://github.com/canberkbagana-tr/vampirkoylu) reposuna pushlandı.
 

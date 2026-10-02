@@ -177,44 +177,99 @@ class VoiceNarrator {
   constructor() {
     this.speechAvailable = 'speechSynthesis' in window;
     this.turkishVoice = null;
-    this.speechQueue = [];
-    this.isSpeaking = false;
+    this.subtitleTimer = null;
+    this.isMuted = false;
     this.initVoices();
   }
 
   initVoices() {
     if (!this.speechAvailable) return;
 
-    const setVoice = () => {
-      const voices = window.speechSynthesis.getVoices();
-      // Türkçe ses ara
-      this.turkishVoice = voices.find(v => v.lang.startsWith('tr') || v.lang === 'tr-TR') || null;
+    const findAndSet = () => {
+      this.turkishVoice = this.detectTurkishVoice();
     };
 
-    setVoice();
+    findAndSet();
     if (window.speechSynthesis.onvoiceschanged !== undefined) {
-      window.speechSynthesis.onvoiceschanged = setVoice;
+      window.speechSynthesis.onvoiceschanged = findAndSet;
     }
   }
 
+  detectTurkishVoice() {
+    if (!this.speechAvailable) return null;
+    const voices = window.speechSynthesis.getVoices() || [];
+    if (!voices.length) return null;
+
+    // 1. Dil kodu 'tr' veya 'tr-TR' olan sesler
+    let voice = voices.find(v => {
+      const l = (v.lang || '').toLowerCase().replace('_', '-');
+      return l === 'tr-tr' || l === 'tr' || l.startsWith('tr-');
+    });
+
+    // 2. İsim bazlı arama (Google Türkçe, Microsoft Tolga/Yelda, Apple Cem/Yelda vb.)
+    if (!voice) {
+      voice = voices.find(v => {
+        const n = (v.name || '').toLowerCase();
+        return n.includes('turkish') || n.includes('türkçe') || n.includes('turkey') ||
+               n.includes('tolga') || n.includes('yelda') || n.includes('filiz') || n.includes('cem');
+      });
+    }
+
+    return voice || null;
+  }
+
+  showSubtitle(text) {
+    const banner = document.getElementById('narrator-banner');
+    const textEl = document.getElementById('narrator-text');
+    if (!banner || !textEl) return;
+
+    textEl.textContent = text;
+    banner.classList.remove('hidden');
+
+    if (this.subtitleTimer) clearTimeout(this.subtitleTimer);
+    const duration = Math.max(5000, text.length * 85);
+    this.subtitleTimer = setTimeout(() => {
+      banner.classList.add('hidden');
+    }, duration);
+  }
+
   speak(text, priority = false) {
-    if (!this.speechAvailable || !text) return;
+    if (!text) return;
 
-    if (priority) {
-      window.speechSynthesis.cancel();
-      this.speechQueue = [];
+    // Her durumda ekranda görsel gotik moderatör altyazısı göster
+    this.showSubtitle(text);
+
+    if (!this.speechAvailable || this.isMuted) return;
+
+    // Mobil gecikmeli yüklemeler için sesi tekrar tara
+    if (!this.turkishVoice) {
+      this.turkishVoice = this.detectTurkishVoice();
     }
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'tr-TR';
-    utterance.rate = 0.95; // Biraz daha gizemli ve yavaş konuşma
-    utterance.pitch = 0.85; // Tok ve atmosferik ses tonu
+    // KRİTİK ÇÖZÜM:
+    // Eğer cihazda kesinlikle Türkçe ses motoru yoksa (örneğin İngilizce sistemler):
+    // Asla varsayılan İngilizce motorla Türkçe okutma! Çünkü İngilizce motor Türkçeyi Latince gibi bozuk okur.
+    // Bunun yerine altyazı gösterilir ve atmosferik çan/müzik sesleri çalınır.
+    if (!this.turkishVoice) {
+      console.warn("Türkçe TTS motoru bulunamadı. Latince benzeri bozuk telaffuzu önlemek için sesli okuma atlandı, gotik altyazı sunuldu.");
+      return;
+    }
 
-    if (this.turkishVoice) {
+    try {
+      if (priority) {
+        window.speechSynthesis.cancel();
+      }
+
+      const utterance = new SpeechSynthesisUtterance(text);
       utterance.voice = this.turkishVoice;
-    }
+      utterance.lang = this.turkishVoice.lang || 'tr-TR';
+      utterance.rate = 0.95;
+      utterance.pitch = 0.95;
 
-    window.speechSynthesis.speak(utterance);
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {
+      console.error("Ses sentezleme hatası:", e);
+    }
   }
 
   stop() {
