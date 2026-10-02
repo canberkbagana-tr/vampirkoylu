@@ -34,14 +34,14 @@
       </div>
       <div class="header-actions">
         <span id="connection-badge" class="status-pill offline">Çevrimdışı</span>
-        <button id="btn-sound-toggle" class="icon-btn" title="Sesi Aç/Kapat" aria-label="Sesi Aç/Kapat">
-          <span id="sound-icon">🔊</span>
+        <button id="btn-sound-toggle" class="icon-btn" title="Sesi Aç/Kapat" aria-label="Sesi Aç/Kapat" style="display:none;">
+          <span id="sound-icon">🔇</span>
         </button>
       </div>
     </header>
 
-    <!-- Canlı Moderatör Altyazı & Bildirim Barı -->
-    <div id="narrator-banner" class="narrator-banner hidden">
+    <!-- Canlı Moderatör Altyazı & Bildirim Barı (Plain modda gizli) -->
+    <div id="narrator-banner" class="narrator-banner hidden" style="display:none !important;">
       <span class="narrator-icon">📜</span>
       <span id="narrator-text" class="narrator-text"></span>
     </div>

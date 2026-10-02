@@ -102,3 +102,24 @@ Tüm önemli değişiklikler ve geliştirme aşamaları bu dosyada kronolojik ol
   - Vampir ekranında seçilen kurbanda kafa karıştıran `✓ Siz` ibaresi `✓ Seçiminiz` olarak değiştirildi.
   - Tek vampir kalındığında "Ortağın henüz seçmedi" çelişkisi kaldırıldı, "Tek Vampirsiniz (Köydeki tüm avlar sizin elinizde!)" bilgilendirmesi ve kilitlenme onay kutusu eklendi.
 
+## [v0.9.0] - 2026-10-02
+### Eklendi & Değiştirildi & Düzeltildi
+- **Öldürülen Oyuncuların Gerçek Rolünün Gizlenmesi:**
+  - İdam edilen veya gece katledilen oyuncuların gerçek kimlikleri artık asla açıklanmaz / söylenmez.
+  - İdam ekranındaki `.role-reveal-pill` ("Gerçek Rolü: X") kaldırıldı; yerine "Kişinin gerçek kimliği bir sır olarak kaldı..." ifadesi getirildi.
+  - Mahkeme loglarından ve anonslardan rol sızıntısı tamamen temizlendi. Roller sadece maç bittiğinde oyun sonu ekranında açılır.
+- **Kahin (Seer) Tam Entegrasyonu & Ekran Düzeltmesi:**
+  - 3 veya daha fazla oyunculu tüm oyunlarda Kahin rolü garanti olarak dağıtıma dahil edildi (`getDynamicRoleComposition` düzeltildi; 4 kişide 0 kahin hatası giderildi).
+  - Kahin seçim yaptığında gelen sonucun anlık state broadcast ile ezilip yok olması yarışı giderildi. `mySeerResult` artık yerel state'te saklanıyor ve Kahin fazı boyunca sonuç kartı ("🧛 BU KİŞİ VAMPİR!" veya "🕊️ BU KİŞİ MASUM BİR KÖYLÜ") sabit olarak ekranda kalıyor.
+  - İncelenen oyuncunun kartı ızgarada `🔮 İncelendi` rozetiyle kilitleniyor.
+  - Kahinin sonucu rahatça okuyabilmesi için faz geçiş süresi 6 saniyeye çıkarıldı.
+- **Doktor ve Vampir Aynı Kişiyi Seçtiğinde Doğrulama & Net Raporlama:**
+  - Doktor ve Vampir aynı köylüyü hedef aldığında kurtarma mekanizmasının kusursuz çalıştığı doğrulandı (`vTargetId === docTargetId`).
+  - Kurbanın canı korunuyor (`isAlive = true`), şafak raporunda açıkça: `🛡️ DOKTOR SALDIRIYI ÖNLEDİ! - Vampirlerin hedef aldığı [İsim], doktorun korumasıyla hayatta kaldı!` bildirimi yapılıyor.
+- **Tüm Seslerin ve Ağır Efektlerin Kaldırılması ("Çok Plain & Sade Mod"):**
+  - Tüm ses efektleri (gong, kalp atışı, şafak melodisi, kart sting'i, tık sesleri) ve Web Audio sentezleyicileri tamamen sessize alındı (`SoundEngine` no-op).
+  - Sesli okuma / konuşma sentezi (Web Speech API) ve mikrofon altyazı barı tamamen kaldırıldı.
+  - Arayüzü yoran ve ağırlaştıran efektler temizlendi: Atmosferik sis (`mist-overlay`), koyu köşe gradyanı (`vignette-overlay`), parlayan gölgeler (`--shadow-glow: none`), parlayan kanlı ay animasyonu, titreyen mumlar (`pulseCandle`), zıplayan parmaklar (`bounceFinger`) ve nabız atan sayaç çemberi (`pulseTimer`) kaldırıldı.
+  - UI ultra sade, akıcı, modern, koyu ve yalın (plain) hale getirildi.
+
+

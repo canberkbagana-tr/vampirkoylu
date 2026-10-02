@@ -32,14 +32,14 @@ Oyuncu sayısındaki değişimlere (örneğin 8'den 7'ye düşülmesi veya artma
 ---
 
 ## 3. Akıllı Moderatör Mekaniği (Fiziksel Moderatörü Devre Dışı Bırakma)
-Bir insan anlatıcı olmadan oyunun yürümesi için 3 kritik teknoloji kullanılır:
-1. **Web Speech API & Ses Efektleri (Sesli Moderatör):**
-   * Türkçe ses motoru doğrudan tarayıcıdan konuşur: *"Köy uykuya dalıyor, herkes gözlerini kapatsın..."*, *"Vampirler uyanın, kurbanınızı seçin..."*
-   * Gece ve gündüz için karanlık ambient müzik, kalp atışı gerilimi, horoz sesi ve kurt uluması.
+Bir insan anlatıcı olmadan oyunun yürümesi için aşağıdaki sistemler kullanılır:
+1. **Sessiz & Yalın Mod (Silent & Plain UX):**
+   * Kullanıcı geri bildirimleri doğrultusunda tüm sentetik ses efektleri (kalp atışı, gong, şafak melodisi vb.) ve Web Speech konuşma sentezi tamamen sessize alınmıştır.
+   * Oyun gürültü yapmadan, ortamı bölmeden, tamamen telefon ekranındaki net ve temiz görsel akışla sessizce ilerler.
 2. **Haptik / Titreşim (Gizli Uyandırma):**
-   * Gözler kapalıyken veya telefon masada ters dururken `navigator.vibrate` ile sadece aktif rolün telefonu titrer! Böylece kimse kafasını kaldırıp etrafa bakarak kimin telefonuna baktığını anlayamaz.
+   * Gözler kapalıyken veya telefon masada ters dururken `navigator.vibrate` ile sadece aktif rolün telefonu sessizce titrer. Böylece kimse başını kaldırıp ses çıkarmadan uyanır.
 3. **Ekran Karartma & "Kör Modu" (Blind Screen):**
-   * Sırası olmayan oyuncunun ekranı tamamen simsiyah olur ve yalnızca *"UYUYORSUNUZ"* yazar. Parmak hareketi anlaşılmasın diye sahte buton tıklama alanları veya dokunmatik kilit konur.
+   * Sırası olmayan oyuncunun ekranı tamamen kararır ve yalnızca sessizce *"KÖY DERİN UYKUDASINIZ"* yazar.
 
 ---
 
@@ -47,41 +47,39 @@ Bir insan anlatıcı olmadan oyunun yürümesi için 3 kritik teknoloji kullanı
 
 ### Faz 0: Lobi & Katılım (Oda Kodu & QR)
 * 1 kişi "Oda Kur" der, 4 haneli rastgele oda kodu üretilir (Örn: `SPNC`).
-* QR Kod ekranda belirir; Sapanca'daki 7 arkadaş kamerayı açıp saniyeler içinde lobiye girer.
+* QR Kod ekranda belirir; Sapanca'daki arkadaşlar kamerayı açıp saniyeler içinde lobiye girer.
 * İsim + Avatar seçimi.
 * Herkes "Hazırım" dediğinde Host oyunu başlatır.
 
 ### Faz 1: Gizli Rol Dağıtımı
 * Kartlar rastgele ve şifreli dağıtılır.
-* "Basılı Tut ve Gör" (Hold to Reveal) mekaniği: Yandaki kişi ekrana bakamasın diye parmak basılı tutulurken kart açılır, çekince kapanır.
+* "Basılı Tut ve Gör" (Hold to Reveal) veya dokunarak çevirme mekaniği.
 * Herkes rolünü onaylar.
 
-### Faz 2: Gece Fazı (Toplu / Adım Adım)
-1. **Genel Uyku:** Ses: *"Gece oldu, herkes gözlerini kapatsın."* (Geri sayım başlar).
-2. **Vampirler:** Vampirlerin ekranı açılır. Diğer vampir arkadaşının ismi yeşil/kırmızı ışıkla görünür. Ortak hedef listesinden kurban seçilir.
-3. **Doktor:** Doktorun ekranı uyanır. Korunacak kişiyi seçer.
-4. **Kahin:** Kahinin ekranı uyanır. Bir kişiyi seçip 'Vampir mi / Masum mu' kartını görür.
-* *Not:* Her gece rolüne eşit süre (örn. 25 sn) verilir, böylece vampir erken seçse bile süre dolmadan diğer faza geçilmez; kimin ne kadar ekrana baktığı dışarıdan anlaşılmaz!
+### Faz 2: Gece Fazı
+1. **Genel Uyku:** Gece başlar, köy derin uykuya dalar.
+2. **Vampirler:** Vampirlerin ekranı açılır. Ortak hedef listesinden kurban seçilir. Canlı tüm vampirler seçim yaptığında erken geçiş yapılır.
+3. **Doktor:** Doktorun ekranı uyanır. Bu gece korumak istediği kişiyi seçer (üst üste iki gece aynı kişi seçilemez).
+4. **Kahin:** Kahinin ekranı uyanır. Bir köylüyü seçtiğinde kartında anında ve sabit olarak "🧛 BU KİŞİ VAMPİR!" veya "🕊️ BU KİŞİ MASUM BİR KÖYLÜ" sonucu belirir.
+* **Doktor & Vampir Karşılaşması (Kurtarma Mekaniği):**
+  * Eğer Vampirlerin seçtiği kurban ile Doktorun koruduğu kişi AYNI ise: Doktor kurbanı kurtarır, kimse ölmez!
+  * Eğer Vampir kurban seçemezse veya Doktor koruyamazsa kurban ölür.
 
-### Faz 3: Gündüz Fazı (2 Dakika Tartışma)
-* Ses ve Güneş doğuşu animasyonu.
-* Gece Raporu: *"Bu gece [İsim] vahşice katledildi!"* veya *"Doktor bu gece bir hayat kurtardı, kimse ölmedi!"*
-* **2 Dakikalık Geri Sayım Sayacı:**
-  * 1:00 kala uyarı gongu.
-  * Son 30 saniye hızlı kalp atışı.
-  * Son 10 saniye sesli geri sayım.
-  * *Opsiyonel:* Erken Oylama Butonu (Herkes hemfikirse tartışma erkenden bitirilebilir).
+### Faz 3: Şafak & Gündüz Tartışması
+* Şafak Raporu:
+  * Eğer kurban varsa: `☠️ [İSİM] KATLEDİLDİ!` (Kişinin gerçek rolü KESİNLİKLE açıklanmaz!).
+  * Eğer Doktor kurtardıysa: `🛡️ DOKTOR SALDIRIYI ÖNLEDİ! - Vampirlerin hedef aldığı [İsim] doktorun korumasıyla hayatta kaldı!`
+* 2 Dakikalık Gündüz Tartışması: Köy meydanında şüpheliler tartışılır. Çoğunluk isterse "Oylamaya Geç" butonuyla erken mahkemeye gidilir.
 
 ### Faz 4: Mahkeme & Oylama (Yargılama)
-* Herkes hayattaki birine oy verir veya "Pas / Çekimser" kalır.
-* Gizli oylama: Süre bitene kadar oylar gizli kalır, süre bitince dramatik efektle kimin kime oy verdiği açılır.
-* En çok oyu alan asılır veya eşitlikte "Kimse asılmadı" kararı çıkar.
-* Asılan kişinin rolü açıklanır (Lobi ayarına bağlı).
+* Herkes hayattaki birine oy verir veya "Pas / Kimseyi Asma" der.
+* En çok oyu alan kişi idam edilir; eşitlikte kimse asılmaz.
+* **KRİTİK GİZLİLİK KURALI (Rol Açıklanmaz):** Asılan kişinin gerçek rolü ASLA ekranda veya loglarda açıklanmaz! Kişinin gerçek kimliği mezara gömülür, böylece vampirler masum rolü yapmaya devam edebilir, köy paranoyası canlı kalır.
 
 ### Faz 5: Zafer Kontrolü & Oyun Sonu
-* **Köylüler Kazanır:** Tüm vampirler öldürüldüğünde.
+* **Köylüler Kazanır:** Tüm vampirler asıldığında.
 * **Vampirler Kazanır:** Vampir sayısı masum sayısına eşitlendiğinde veya geçtiğinde.
-* Oyun sonu istatistikleri ve "Tekrar Oyna" butonu ile aynı lobide hemen yeni tur.
+* **Oyun Sonu Ekranı:** Sadece maç tamamen bittiğinde tüm oyuncuların gerçek rolleri ve kartları açılır.
 
 ---
 

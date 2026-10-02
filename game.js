@@ -157,6 +157,8 @@ class GameController {
     this._phaseAutoAdvanceTimeout = null;
     this._tickedSeconds = new Set();
     this.wakeLock = null;
+    this.mySeerResult = null;
+    this.mySeerTarget = null;
 
     this.initNetworkHooks();
     this.requestWakeLock();
@@ -312,12 +314,13 @@ class GameController {
         if (this.state.phase === PHASES.NIGHT_DOCTOR) {
           this.state.nightActions.doctorTarget = payload.targetId;
           this.broadcastCurrentState();
+          this.addLog(`Gece: Doktor hedefini belirledi.`);
           if (this._phaseAutoAdvanceTimeout) clearTimeout(this._phaseAutoAdvanceTimeout);
           this._phaseAutoAdvanceTimeout = setTimeout(() => {
             if (this.state.phase === PHASES.NIGHT_DOCTOR) {
               this.startPhaseNightSeer();
             }
-          }, 1200);
+          }, 1500);
         }
         break;
       }
@@ -334,18 +337,28 @@ class GameController {
             };
             this.state.nightActions.seerTarget = target.id;
             this.state.nightActions.seerResult = result;
+
+            // Eğer kahin bensem yerel sonucu hemen kaydet ve UI'ı güncelle
+            if (playerId === this.network.playerId) {
+              this.mySeerResult = result;
+              this.renderUI();
+            }
+
             // Kahine özel sonuç gönder
             this.network.sendToClient(playerId, {
               type: 'SEER_RESULT',
               result: result
             });
+
             this.broadcastCurrentState();
+
+            // Kahinin kart sonucunu rahatça okuması için 6 sn süre ver
             if (this._phaseAutoAdvanceTimeout) clearTimeout(this._phaseAutoAdvanceTimeout);
             this._phaseAutoAdvanceTimeout = setTimeout(() => {
               if (this.state.phase === PHASES.NIGHT_SEER) {
                 this.startPhaseDayDawn();
               }
-            }, 2500);
+            }, 6000);
           }
         }
         break;
@@ -554,7 +567,7 @@ class GameController {
         this.sound.playGong();
         const executed = this.state.dayActions.lastExecutedDay;
         if (executed) {
-          this.narrator.speak(`Köy halkı kararını verdi. ${executed.name} idam edildi! Rolü: ${ROLES[executed.role].name}`, true);
+          this.narrator.speak(`Köy halkı kararını verdi. ${executed.name} idam edildi!`, true);
         } else {
           this.narrator.speak('Oylar eşit çıktı veya çoğunluk sağlanamadı. Bugün kimse asılmadı.', true);
         }
@@ -748,14 +761,18 @@ class GameController {
   // Kişi sayısına göre dinamik rol dengesi hesaplama
   getDynamicRoleComposition(playerCount) {
     const total = Math.max(1, playerCount);
-    let vampires = 2;
+    let vampires = 1;
     let doctors = 1;
     let seers = 1;
 
-    if (total <= 4) {
+    if (total <= 2) {
+      vampires = 1;
+      doctors = 0;
+      seers = 1;
+    } else if (total <= 3) {
       vampires = 1;
       doctors = 1;
-      seers = 0;
+      seers = 1;
     } else if (total <= 6) {
       vampires = 1;
       doctors = 1;
@@ -766,13 +783,13 @@ class GameController {
       doctors = 1;
       seers = 1;
     } else {
-      // 10 ve üzeri kalabalık gruplar için 3 vampir
-      vampires = Math.max(3, Math.floor(total * 0.3));
+      // 10 ve üzeri kalabalık gruplar için
+      vampires = Math.max(3, Math.floor(total * 0.28));
       doctors = 1;
       seers = 1;
     }
 
-    const villagers = Math.max(1, total - (vampires + doctors + seers));
+    const villagers = Math.max(0, total - (vampires + doctors + seers));
     return { vampires, doctors, seers, villagers, total };
   }
 
@@ -833,10 +850,12 @@ class GameController {
       vampireTarget: null,
       vampireVotes: {},
       doctorTarget: null,
-      lastDoctorTarget: this.state.nightActions.doctorTarget || null,
+      lastDoctorTarget: (this.state.nightActions && this.state.nightActions.doctorTarget) || null,
       seerTarget: null,
       seerResult: null
     };
+    this.mySeerResult = null;
+    this.mySeerTarget = null;
 
     this.startTimer(6, null, () => {
       this.startPhaseNightVampire();
@@ -878,8 +897,8 @@ class GameController {
   startPhaseNightDoctor() {
     const doctorAlive = this.state.players.some(p => p.role === 'DOCTOR' && p.isAlive);
     if (!doctorAlive) {
-      // Doktor ölmüşse hızlıca Kahine geç
-      setTimeout(() => this.startPhaseNightSeer(), 2500);
+      // Doktor ölmüşse veya yoksa hızlıca Kahine geç
+      setTimeout(() => this.startPhaseNightSeer(), 1500);
       return;
     }
 
@@ -895,7 +914,7 @@ class GameController {
   startPhaseNightSeer() {
     const seerAlive = this.state.players.some(p => p.role === 'SEER' && p.isAlive);
     if (!seerAlive) {
-      setTimeout(() => this.startPhaseDayDawn(), 2500);
+      setTimeout(() => this.startPhaseDayDawn(), 1500);
       return;
     }
 
@@ -915,15 +934,17 @@ class GameController {
     const docTargetId = this.state.nightActions.doctorTarget;
 
     let killedPlayer = null;
-    if (vTargetId && vTargetId !== docTargetId) {
+    let savedPlayer = null;
+
+    if (vTargetId && docTargetId && vTargetId === docTargetId) {
+      savedPlayer = this.state.players.find(p => p.id === vTargetId);
+      this.addLog(`Gece: Doktor ${savedPlayer ? savedPlayer.name : 'kurbanı'} koruyarak kurtardı! Kimse ölmedi.`);
+    } else if (vTargetId && vTargetId !== docTargetId) {
       killedPlayer = this.state.players.find(p => p.id === vTargetId);
       if (killedPlayer) {
         killedPlayer.isAlive = false;
         this.addLog(`Gece: ${killedPlayer.name} vampirler tarafından öldürüldü.`);
       }
-    } else if (vTargetId && vTargetId === docTargetId) {
-      const saved = this.state.players.find(p => p.id === vTargetId);
-      this.addLog(`Gece: Doktor ${saved ? saved.name : 'birini'} kurtardı!`);
     } else {
       this.addLog('Gece: Vampirler kurban seçemedi.');
     }
@@ -931,7 +952,8 @@ class GameController {
     this.state.dayActions = {
       skipDebateVotes: [],
       votes: {},
-      lastKilledNight: killedPlayer ? { name: killedPlayer.name, role: killedPlayer.role } : null,
+      lastKilledNight: killedPlayer ? { name: killedPlayer.name } : null,
+      lastSavedNight: savedPlayer ? { name: savedPlayer.name } : null,
       lastExecutedDay: null
     };
 
@@ -999,10 +1021,9 @@ class GameController {
       if (executedPlayer) {
         executedPlayer.isAlive = false;
         this.state.dayActions.lastExecutedDay = {
-          name: executedPlayer.name,
-          role: executedPlayer.role
+          name: executedPlayer.name
         };
-        this.addLog(`Mahkeme: ${executedPlayer.name} ${maxVotes} oyla asıldı (${ROLES[executedPlayer.role].name}).`);
+        this.addLog(`Mahkeme: ${executedPlayer.name} ${maxVotes} oyla asıldı.`);
       }
     } else {
       this.state.dayActions.lastExecutedDay = null;
@@ -1071,6 +1092,15 @@ class GameController {
         isBot: true
       });
     }
+    if (!this.state.customRoleSetupManuallySet) {
+      const autoComp = this.getDynamicRoleComposition(this.state.players.length);
+      this.state.roleSetup = {
+        vampire: autoComp.vampires,
+        doctor: autoComp.doctors,
+        seer: autoComp.seers,
+        villager: autoComp.villagers
+      };
+    }
     this.broadcastCurrentState();
   }
 
@@ -1136,17 +1166,67 @@ class GameController {
   }
 
   voteVampireTarget(targetId) {
+    if (this.network.isHost || this.isTestMode) {
+      this.state.nightActions.vampireVotes[this.me.id] = targetId;
+      this.broadcastCurrentState();
+      const aliveVamps = this.state.players.filter(p => p.role === 'VAMPIRE' && p.isAlive);
+      const allVoted = aliveVamps.every(v => this.state.nightActions.vampireVotes[v.id]);
+      if (allVoted && aliveVamps.length > 0) {
+        if (this._phaseAutoAdvanceTimeout) clearTimeout(this._phaseAutoAdvanceTimeout);
+        this._phaseAutoAdvanceTimeout = setTimeout(() => {
+          if (this.state.phase === PHASES.NIGHT_VAMPIRE) {
+            this.evaluateVampireVotes();
+            this.startPhaseNightDoctor();
+          }
+        }, 1200);
+      }
+    }
     this.network.sendAction('VAMPIRE_VOTE', { targetId });
     this.haptic.confirmAction();
-    this.sound.playHeartbeat();
   }
 
   protectDoctorTarget(targetId) {
+    if (this.network.isHost || this.isTestMode) {
+      this.state.nightActions.doctorTarget = targetId;
+      this.broadcastCurrentState();
+      this.addLog(`Gece: Doktor hedefini belirledi.`);
+      if (this._phaseAutoAdvanceTimeout) clearTimeout(this._phaseAutoAdvanceTimeout);
+      this._phaseAutoAdvanceTimeout = setTimeout(() => {
+        if (this.state.phase === PHASES.NIGHT_DOCTOR) {
+          this.startPhaseNightSeer();
+        }
+      }, 1500);
+    }
     this.network.sendAction('DOCTOR_PROTECT', { targetId });
     this.haptic.confirmAction();
   }
 
   inspectSeerTarget(targetId) {
+    if (this.mySeerResult) return;
+    this.mySeerTarget = targetId;
+
+    const target = this.state.players.find(x => x.id === targetId);
+    if (target) {
+      const isVamp = target.role === 'VAMPIRE';
+      const result = {
+        targetId: target.id,
+        targetName: target.name,
+        isVampire: isVamp
+      };
+      this.mySeerResult = result;
+      if (this.network.isHost || this.isTestMode) {
+        this.state.nightActions.seerTarget = target.id;
+        this.state.nightActions.seerResult = result;
+        if (this._phaseAutoAdvanceTimeout) clearTimeout(this._phaseAutoAdvanceTimeout);
+        this._phaseAutoAdvanceTimeout = setTimeout(() => {
+          if (this.state.phase === PHASES.NIGHT_SEER) {
+            this.startPhaseDayDawn();
+          }
+        }, 6000);
+      }
+      this.renderUI();
+    }
+
     this.network.sendAction('SEER_INSPECT', { targetId });
     this.haptic.confirmAction();
   }
@@ -1162,18 +1242,8 @@ class GameController {
   }
 
   displaySeerResult(result) {
-    const cardEl = document.getElementById('seer-reveal-card');
-    if (!cardEl) return;
-
-    cardEl.style.display = 'block';
-    const isVamp = result.isVampire;
-    cardEl.className = `seer-result-card ${isVamp ? 'is-vampire' : 'is-innocent'}`;
-    cardEl.innerHTML = `
-      <div class="result-badge">${isVamp ? '☠️ VAMPİR' : '🛡️ MASUM'}</div>
-      <h3>${result.targetName}</h3>
-      <p>${isVamp ? 'Bu kişi karanlığın hizmetkarı, BİR VAMPİR!' : 'Bu kişi temiz kalpli masum bir köylü.'}</p>
-    `;
-    this.sound.playCardSting();
+    this.mySeerResult = result;
+    this.renderUI();
   }
 
   // --- ROL YAPILANDIRMA VE SEÇİM METODLARI ---
@@ -1670,8 +1740,10 @@ class GameController {
     // --- FAZ 5: GECE KAHİN ---
     if (phase === PHASES.NIGHT_SEER) {
       const isSeer = this.me.role === 'SEER' && this.me.isAlive;
-      if (phaseHeader) phaseHeader.textContent = isSeer ? 'KAHİN UYANDI' : 'GECE (UYUYORSUNUZ)';
-      if (phaseSub) phaseSub.textContent = isSeer ? 'Gizli kimliğini öğrenmek istediğiniz kişiyi seçin.' : 'Gözlerinizi açmayın!';
+      if (phaseHeader) phaseHeader.textContent = isSeer ? 'KAHİN UYANDI 🔮' : 'GECE (UYUYORSUNUZ)';
+      if (phaseSub) phaseSub.textContent = isSeer 
+        ? (this.mySeerResult ? 'Kimlik tespit edildi!' : 'Gizli kimliğini öğrenmek istediğiniz kişiyi seçin.') 
+        : 'Gözlerinizi açmayın!';
 
       if (!isSeer) {
         this.renderSleepingBlindScreen(contentArea);
@@ -1679,17 +1751,37 @@ class GameController {
       }
 
       const targets = this.getAlivePlayers().filter(p => p.id !== this.me.id);
+      const res = this.mySeerResult;
+
       contentArea.innerHTML = `
         <div class="seer-action-panel">
-          <div class="seer-info-badge">🔮 Bir köylü seçin, gizli kimliği kristal kürede belirsin.</div>
-          <div id="seer-reveal-card" class="seer-reveal-container" style="display:none;"></div>
+          ${res ? `
+            <div class="seer-result-card ${res.isVampire ? 'is-vampire' : 'is-innocent'}" style="margin-bottom: 16px; padding: 14px; border-radius: 12px; border: 2px solid ${res.isVampire ? '#e11d48' : '#10b981'}; background: rgba(18, 20, 29, 0.95); text-align: center;">
+              <div class="result-badge" style="font-size: 15px; font-weight: 800; color: ${res.isVampire ? '#e11d48' : '#10b981'}; margin-bottom: 6px;">
+                ${res.isVampire ? '🧛 BU KİŞİ VAMPİR!' : '🕊️ BU KİŞİ MASUM BİR KÖYLÜ'}
+              </div>
+              <h3 style="font-size: 19px; font-weight: 700; margin-bottom: 4px; color: #fff;">${res.targetName}</h3>
+              <p style="font-size: 13px; color: var(--text-secondary);">
+                ${res.isVampire ? 'Tehlike! Karanlığın hizmetkarını buldunuz. Gündüz mahkemede köyü ikna edin!' : 'Güvenli! Bu kişi masum köylü tarafında yer alıyor.'}
+              </p>
+            </div>
+          ` : `
+            <div class="seer-info-badge">🔮 Bir köylü seçin, gizli kimliği hemen açılsın.</div>
+          `}
+          
           <div class="player-selection-grid">
-            ${targets.map(t => `
-              <button class="target-card" onclick="window.gameController.inspectSeerTarget('${t.id}')">
-                <div class="target-avatar">${t.name.charAt(0)}</div>
-                <div class="target-name">${t.name}</div>
-              </button>
-            `).join('')}
+            ${targets.map(t => {
+              const isSelected = (res && res.targetId === t.id) || (this.mySeerTarget === t.id);
+              return `
+                <button class="target-card ${isSelected ? 'selected-vote' : ''} ${res ? 'disabled' : ''}" 
+                  ${res ? 'disabled' : ''} 
+                  onclick="window.gameController.inspectSeerTarget('${t.id}')">
+                  <div class="target-avatar">${t.name.charAt(0)}</div>
+                  <div class="target-name">${t.name}</div>
+                  ${isSelected ? '<span class="vote-badge">🔮 İncelendi</span>' : ''}
+                </button>
+              `;
+            }).join('')}
           </div>
         </div>
       `;
@@ -1702,11 +1794,30 @@ class GameController {
       if (phaseSub) phaseSub.textContent = 'Köy uyanıyor, gece neler oldu?';
 
       const killed = this.state.dayActions.lastKilledNight;
+      const saved = this.state.dayActions.lastSavedNight;
+
+      let reportTitle = 'KİMSE ÖLMEDİ!';
+      let reportDesc = 'Köy bu gece huzurlu ve sessiz bir uyku çekti.';
+      let reportClass = 'saved';
+      let reportIcon = '🕊️';
+
+      if (killed) {
+        reportTitle = `${killed.name.toUpperCase()} KATLEDİLDİ!`;
+        reportDesc = `Vampirler gece kan döktü. ${killed.name} artık aramızda değil.`;
+        reportClass = 'has-death';
+        reportIcon = '☠️';
+      } else if (saved) {
+        reportTitle = 'DOKTOR SALDIRIYI ÖNLEDİ!';
+        reportDesc = `Vampirlerin hedef aldığı ${saved.name}, doktorun korumasıyla hayatta kaldı!`;
+        reportClass = 'saved';
+        reportIcon = '🛡️';
+      }
+
       contentArea.innerHTML = `
-        <div class="dawn-report-card ${killed ? 'has-death' : 'saved'}">
-          <div class="report-icon">${killed ? '☠️' : '🕊️'}</div>
-          <h2>${killed ? `${killed.name.toUpperCase()} KATLEDİLDİ!` : 'KİMSE ÖLMEDİ!'}</h2>
-          <p>${killed ? `Vampirler gece kan döktü. ${killed.name} artık aramızda değil.` : 'Doktor gece vampirlerin saldırısını püskürttü!'}</p>
+        <div class="dawn-report-card ${reportClass}">
+          <div class="report-icon">${reportIcon}</div>
+          <h2>${reportTitle}</h2>
+          <p>${reportDesc}</p>
         </div>
       `;
       return;
@@ -1809,7 +1920,7 @@ class GameController {
 
     // --- FAZ 9: İNFAZ SONUCU ---
     if (phase === PHASES.DAY_EXECUTION) {
-      if (phaseHeader) phaseHeader.textContent = 'MAHKEME KARARI';
+      if (phaseHeader) phaseHeader.textContent = 'MAHKEME KARARI ⚖️';
       if (phaseSub) phaseSub.textContent = 'Köy halkının kararı açıklandı!';
 
       const executed = this.state.dayActions.lastExecutedDay;
@@ -1819,9 +1930,7 @@ class GameController {
           <h2>${executed ? `${executed.name.toUpperCase()} ASILDI!` : 'KİMSE ASILMADI!'}</h2>
           ${executed ? `
             <p>Köy halkı ${executed.name}'i darağacına gönderdi.</p>
-            <div class="role-reveal-pill" style="border-color:${ROLES[executed.role].color}">
-              Gerçek Rolü: <strong style="color:${ROLES[executed.role].color}">${ROLES[executed.role].name}</strong>
-            </div>
+            <p style="font-size: 13px; color: var(--text-secondary); margin-top: 8px;">Kişinin gerçek kimliği bir sır olarak kaldı...</p>
           ` : '<p>Oylar eşit çıktı veya çoğunluk sağlanamadı. Darağacı boş kaldı.</p>'}
         </div>
       `;

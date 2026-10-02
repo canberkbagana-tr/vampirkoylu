@@ -30,8 +30,8 @@
   --radius-lg: 20px;
   --radius-full: 9999px;
 
-  --shadow-card: 0 10px 30px -5px rgba(0, 0, 0, 0.7);
-  --shadow-glow: 0 0 25px rgba(225, 29, 72, 0.25);
+  --shadow-card: 0 8px 24px -4px rgba(0, 0, 0, 0.7);
+  --shadow-glow: none;
 }
 
 /* Sıfırlama & Temel Ayarlar */
@@ -56,34 +56,13 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Atmosferik Sis & Karartma */
+/* Atmosferik Sis & Karartma (Plain Mod) */
 .background-ambient {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  overflow: hidden;
+  display: none !important;
 }
 
-.mist-overlay {
-  position: absolute;
-  inset: -50%;
-  background: radial-gradient(circle at 50% 30%, rgba(225, 29, 72, 0.08), transparent 60%),
-              radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.06), transparent 50%);
-  filter: blur(60px);
-  animation: mistFloat 18s ease-in-out infinite alternate;
-}
-
-.vignette-overlay {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at center, transparent 40%, rgba(5, 6, 9, 0.85) 100%);
-}
-
-@keyframes mistFloat {
-  0% { transform: scale(1) translate(0, 0); }
-  50% { transform: scale(1.1) translate(-20px, 15px); }
-  100% { transform: scale(1.05) translate(20px, -15px); }
+.mist-overlay, .vignette-overlay {
+  display: none !important;
 }
 
 /* Ana Uygulama Taşıyıcısı (Mobil ve Masaüstü Optimize) */
@@ -117,13 +96,6 @@ body {
 
 .blood-moon-icon {
   font-size: 26px;
-  filter: drop-shadow(0 0 10px rgba(225, 29, 72, 0.8));
-  animation: pulseIcon 3s infinite alternate;
-}
-
-@keyframes pulseIcon {
-  0% { transform: scale(1); }
-  100% { transform: scale(1.12); }
 }
 
 .brand-text h1 {
@@ -1037,12 +1009,6 @@ input[type="text"]:focus {
 
 .hold-prompt .finger-icon {
   font-size: 40px;
-  animation: bounceFinger 1.5s infinite;
-}
-
-@keyframes bounceFinger {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
 }
 
 .hold-prompt strong {
@@ -1113,12 +1079,6 @@ input[type="text"]:focus {
 .candle-flame, .moon-pulse {
   font-size: 46px;
   margin-bottom: 16px;
-  animation: pulseCandle 2.5s infinite ease-in-out;
-}
-
-@keyframes pulseCandle {
-  0%, 100% { opacity: 0.6; transform: scale(0.95); }
-  50% { opacity: 1; transform: scale(1.1); filter: drop-shadow(0 0 16px rgba(245, 158, 11, 0.8)); }
 }
 
 .night-blind-screen h2 {
@@ -1348,19 +1308,12 @@ input[type="text"]:focus {
   width: 170px;
   height: 170px;
   border-radius: var(--radius-full);
-  background: radial-gradient(circle, rgba(245, 158, 11, 0.12), rgba(9, 10, 15, 0.8));
+  background: rgba(18, 20, 30, 0.95);
   border: 3px solid var(--color-gold);
-  box-shadow: 0 0 35px rgba(245, 158, 11, 0.35);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  animation: pulseTimer 2s infinite ease-in-out;
-}
-
-@keyframes pulseTimer {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.03); box-shadow: 0 0 45px rgba(245, 158, 11, 0.5); }
 }
 
 .timer-digits {
