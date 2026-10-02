@@ -99,6 +99,88 @@
       <!-- Dinamik Rol Dağılım Önizlemesi (Kişi Sayısına Göre Değişken) -->
       <div id="lobby-role-preview" class="role-preview-bar"></div>
 
+      <!-- Host & Admin Rol Yapılandırma Paneli (Ayarlanabilir Rol Sayıları) -->
+      <div id="lobby-role-customizer" class="role-customizer-card">
+        <div class="customizer-header" onclick="window.gameController.toggleRoleCustomizer()">
+          <div class="customizer-title">
+            <span>⚙️ ROL DAĞILIMINI AYARLA</span>
+            <small id="customizer-summary-text">Otomatik Denge: 2 Vampir, 1 Doktor, 1 Kahin, 3 Köylü</small>
+          </div>
+          <span id="customizer-toggle-icon" class="toggle-icon">▼</span>
+        </div>
+
+        <div id="customizer-body" class="customizer-body" style="display:none;">
+          <div class="role-stepper-row">
+            <div class="role-label">
+              <span class="icon">🧛</span>
+              <div>
+                <strong>Vampir</strong>
+                <small>Gece kurban seçer</small>
+              </div>
+            </div>
+            <div class="stepper-controls">
+              <button class="step-btn" onclick="window.gameController.adjustRoleCount('vampire', -1)">-</button>
+              <span id="count-role-vampire" class="step-value">2</span>
+              <button class="step-btn" onclick="window.gameController.adjustRoleCount('vampire', 1)">+</button>
+            </div>
+          </div>
+
+          <div class="role-stepper-row">
+            <div class="role-label">
+              <span class="icon">💉</span>
+              <div>
+                <strong>Doktor</strong>
+                <small>Gece 1 kişiyi kurtarır</small>
+              </div>
+            </div>
+            <div class="stepper-controls">
+              <button class="step-btn" onclick="window.gameController.adjustRoleCount('doctor', -1)">-</button>
+              <span id="count-role-doctor" class="step-value">1</span>
+              <button class="step-btn" onclick="window.gameController.adjustRoleCount('doctor', 1)">+</button>
+            </div>
+          </div>
+
+          <div class="role-stepper-row">
+            <div class="role-label">
+              <span class="icon">🔮</span>
+              <div>
+                <strong>Kahin</strong>
+                <small>Gece kimlik sorgular</small>
+              </div>
+            </div>
+            <div class="stepper-controls">
+              <button class="step-btn" onclick="window.gameController.adjustRoleCount('seer', -1)">-</button>
+              <span id="count-role-seer" class="step-value">1</span>
+              <button class="step-btn" onclick="window.gameController.adjustRoleCount('seer', 1)">+</button>
+            </div>
+          </div>
+
+          <div class="role-stepper-row">
+            <div class="role-label">
+              <span class="icon">🧑‍🌾</span>
+              <div>
+                <strong>Köylü (Meme)</strong>
+                <small>4 komik karttan dağıtılır</small>
+              </div>
+            </div>
+            <div class="stepper-controls">
+              <button class="step-btn" onclick="window.gameController.adjustRoleCount('villager', -1)">-</button>
+              <span id="count-role-villager" class="step-value">3</span>
+              <button class="step-btn" onclick="window.gameController.adjustRoleCount('villager', 1)">+</button>
+            </div>
+          </div>
+
+          <div class="customizer-footer">
+            <div class="customizer-status">
+              Toplam Rol: <strong id="customizer-total-roles">7</strong> / <span id="customizer-total-players">7</span> Oyuncu
+            </div>
+            <button class="btn-ghost-sm" onclick="window.gameController.autoBalanceRoles()">
+              ⚡ Önerilene Sıfırla
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- QR Kod Katılım Alanı (Sapanca'da diğer telefonların hızlıca kamerayla okuması için) -->
       <div class="qr-share-card">
         <div class="qr-wrapper">
@@ -123,7 +205,7 @@
         <button id="btn-lobby-ready" class="btn-primary">HAZIRIM</button>
 
         <div id="host-controls" class="host-controls" style="display:none;">
-          <button id="btn-host-add-bots" class="btn-ghost-sm">+ Kalanı Botla Doldur (8'e Tamamla)</button>
+          <button id="btn-host-add-bots" class="btn-ghost-sm">🤖 +1 Test Botu Ekle</button>
           <button id="btn-host-start-game" class="btn-accent">OYUNU BAŞLAT ⚔️</button>
         </div>
       </div>

@@ -56,3 +56,14 @@ Tüm önemli değişiklikler ve geliştirme aşamaları bu dosyada kronolojik ol
 - **Meme Kartları Tekilleştirilmiş Dağıtımı:**
   - 7 kişilik oyunda 4 köylü meme kartı havuzundan rastgele 3 tanesi seçilerek 3 köylüye atanır; aynı kart asla iki kişiye verilmez.
 
+## [v0.6.0] - 2026-10-02
+### Eklendi & Değiştirildi
+- **Host & Admin Özel Rol Yapılandırma Paneli (`#lobby-role-customizer`):**
+  - Host veya Canberk Admin lobi ekranında açılır kapanır panel üzerinden istediği gibi rol sayılarını artırıp azaltabilir (`+` / `-` butonları).
+  - Vampir, Doktor, Kahin ve Köylü sayıları tamamen manuel olarak ayarlanabilir (Örn: 7 kişide 1 veya 2 vampir, 8 kişide 3 vampir vb.).
+  - **⚡ Önerilene Sıfırla:** Tek tıkla o anki oyuncu sayısına en uygun matematiksel dengeye dönme butonu.
+- **Canlı Senkronizasyon (`UPDATE_ROLE_SETUP`):**
+  - Host veya Admin rolleri değiştirdiğinde tüm oyuncuların lobi ekranındaki rozetler ve sayaçlar anlık olarak güncellenir.
+- **Tek Tuşla Test Botu Ekleme:**
+  - Host kontrollerine `🤖 +1 Test Botu Ekle` butonu eklendi, böylece istenen tam kişi sayısına (7, 8 vb.) kolayca ulaşılabilir.
+

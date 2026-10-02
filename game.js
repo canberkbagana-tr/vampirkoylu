@@ -204,7 +204,30 @@ class GameController {
           p.name = playerName;
           if (isCanberk) p.isAdmin = true;
         }
+
+        // Eğer lobi sahibi henüz özel bir rol dağılımı ayarlamadıysa, kişi sayısına göre otomatik dengele
+        if (!this.state.customRoleSetupManuallySet) {
+          const autoComp = this.getDynamicRoleComposition(this.state.players.length);
+          this.state.roleSetup = {
+            vampire: autoComp.vampires,
+            doctor: autoComp.doctors,
+            seer: autoComp.seers,
+            villager: autoComp.villagers
+          };
+        }
+
         this.broadcastCurrentState();
+        break;
+      }
+
+      case 'UPDATE_ROLE_SETUP': {
+        const isSenderAdmin = action.isAdmin || (action.playerName || '').trim().toLowerCase() === 'canberk';
+        if (this.network.isHost || isSenderAdmin) {
+          this.state.roleSetup = { ...this.state.roleSetup, ...payload.roleSetup };
+          this.state.customRoleSetupManuallySet = !payload.isAuto;
+          this.addLog(`Host rol dağılımını güncelledi: ${this.state.roleSetup.vampire}V, ${this.state.roleSetup.doctor}D, ${this.state.roleSetup.seer}K, ${this.state.roleSetup.villager}K`);
+          this.broadcastCurrentState();
+        }
         break;
       }
 
@@ -608,23 +631,37 @@ class GameController {
   }
 
   generateRoleDeck(playerCount) {
-    const comp = this.getDynamicRoleComposition(playerCount);
-    let deck = [];
+    let comp = this.state.roleSetup;
+    if (!comp || !this.state.customRoleSetupManuallySet) {
+      const dynamic = this.getDynamicRoleComposition(playerCount);
+      comp = {
+        vampire: dynamic.vampires,
+        doctor: dynamic.doctors,
+        seer: dynamic.seers,
+        villager: dynamic.villagers
+      };
+      this.state.roleSetup = comp;
+    }
 
-    // Vampirler
-    for (let i = 0; i < comp.vampires; i++) deck.push('VAMPIRE');
-    // Doktor
-    for (let i = 0; i < comp.doctors; i++) deck.push('DOCTOR');
-    // Kahin
-    for (let i = 0; i < comp.seers; i++) deck.push('SEER');
+    let vampires = comp.vampire !== undefined ? comp.vampire : (comp.vampires || 2);
+    let doctors = comp.doctor !== undefined ? comp.doctor : (comp.doctors || 1);
+    let seers = comp.seer !== undefined ? comp.seer : (comp.seers || 1);
+
+    if (vampires < 1) vampires = 1;
+
+    let deck = [];
+    for (let i = 0; i < vampires; i++) deck.push('VAMPIRE');
+    for (let i = 0; i < doctors; i++) deck.push('DOCTOR');
+    for (let i = 0; i < seers; i++) deck.push('SEER');
 
     // 4 Benzersiz Meme Köylü Kartı Havuzu
     const allMemeVillagers = ['VILLAGER_1', 'VILLAGER_2', 'VILLAGER_3', 'VILLAGER_4'];
     const shuffledMemes = [...allMemeVillagers];
     this.shuffle(shuffledMemes);
 
-    // Her köylüye farklı meme kartı ata (4'e kadar kesinlikle benzersiz)
-    for (let i = 0; i < comp.villagers; i++) {
+    // Kalan tüm koltukları meme köylü kartlarıyla doldur
+    const neededVillagers = Math.max(0, playerCount - deck.length);
+    for (let i = 0; i < neededVillagers; i++) {
       if (i < shuffledMemes.length) {
         deck.push(shuffledMemes[i]);
       } else {
@@ -993,6 +1030,56 @@ class GameController {
     this.sound.playCardSting();
   }
 
+  // --- ROL YAPILANDIRMA VE SEÇİM METODLARI ---
+
+  toggleRoleCustomizer() {
+    const body = document.getElementById('customizer-body');
+    const icon = document.getElementById('customizer-toggle-icon');
+    if (!body) return;
+    const isHidden = body.style.display === 'none';
+    body.style.display = isHidden ? 'block' : 'none';
+    if (icon) icon.textContent = isHidden ? '▲' : '▼';
+  }
+
+  adjustRoleCount(roleKey, delta) {
+    const isCanberk = (this.me.name || '').trim().toLowerCase() === 'canberk' || this.me.isAdmin;
+    if (!this.network.isHost && !isCanberk) {
+      alert('Rolleri sadece Oda Lideri (Host) veya Admin ayarlayabilir.');
+      return;
+    }
+
+    const currentSetup = { ...this.state.roleSetup };
+    let v = currentSetup.vampire !== undefined ? currentSetup.vampire : 2;
+    let d = currentSetup.doctor !== undefined ? currentSetup.doctor : 1;
+    let s = currentSetup.seer !== undefined ? currentSetup.seer : 1;
+    let vill = currentSetup.villager !== undefined ? currentSetup.villager : 3;
+
+    if (roleKey === 'vampire') v = Math.max(1, Math.min(6, v + delta));
+    if (roleKey === 'doctor') d = Math.max(0, Math.min(3, d + delta));
+    if (roleKey === 'seer') s = Math.max(0, Math.min(3, s + delta));
+    if (roleKey === 'villager') vill = Math.max(0, Math.min(15, vill + delta));
+
+    const newSetup = { vampire: v, doctor: d, seer: s, villager: vill };
+    this.network.sendAction('UPDATE_ROLE_SETUP', { roleSetup: newSetup, isAuto: false });
+    this.haptic.confirmAction();
+  }
+
+  autoBalanceRoles() {
+    const isCanberk = (this.me.name || '').trim().toLowerCase() === 'canberk' || this.me.isAdmin;
+    if (!this.network.isHost && !isCanberk) return;
+
+    const count = this.state.players.length || 7;
+    const comp = this.getDynamicRoleComposition(count);
+    const newSetup = {
+      vampire: comp.vampires,
+      doctor: comp.doctors,
+      seer: comp.seers,
+      villager: comp.villagers
+    };
+    this.network.sendAction('UPDATE_ROLE_SETUP', { roleSetup: newSetup, isAuto: true });
+    this.haptic.confirmAction();
+  }
+
   // --- CANBERK ADMİN YARDIMCI METODLARI ---
 
   adminForceNextPhase() {
@@ -1082,16 +1169,42 @@ class GameController {
       countEl.textContent = `${pCount} Oyuncu${pCount < 4 ? ' (Min 4)' : ''}`;
     }
 
-    // Dinamik Rol Önizleme Çubuğu
-    const comp = this.getDynamicRoleComposition(pCount || 1);
+    // Rol Yapılandırması ve Önizleme
+    const setup = this.state.roleSetup || this.getDynamicRoleComposition(pCount || 7);
+    const vVal = setup.vampire !== undefined ? setup.vampire : (setup.vampires || 2);
+    const dVal = setup.doctor !== undefined ? setup.doctor : (setup.doctors || 1);
+    const sVal = setup.seer !== undefined ? setup.seer : (setup.seers || 1);
+    const villVal = setup.villager !== undefined ? setup.villager : (setup.villagers || 3);
+    const totalRoles = vVal + dVal + sVal + villVal;
+
+    // Rol Önizleme Çubuğu
     const previewEl = document.getElementById('lobby-role-preview');
     if (previewEl) {
       previewEl.innerHTML = `
-        <span class="preview-badge vamp">🧛 ${comp.vampires} Vampir</span>
-        <span class="preview-badge doc">💉 ${comp.doctors} Doktor</span>
-        ${comp.seers > 0 ? `<span class="preview-badge seer">🔮 ${comp.seers} Kahin</span>` : ''}
-        <span class="preview-badge vill">🧑‍🌾 ${comp.villagers} Köylü</span>
+        <span class="preview-badge vamp">🧛 ${vVal} Vampir</span>
+        ${dVal > 0 ? `<span class="preview-badge doc">💉 ${dVal} Doktor</span>` : ''}
+        ${sVal > 0 ? `<span class="preview-badge seer">🔮 ${sVal} Kahin</span>` : ''}
+        <span class="preview-badge vill">🧑‍🌾 ${villVal} Köylü</span>
       `;
+    }
+
+    // Rol Yapılandırma Paneli Elemanları
+    const vEl = document.getElementById('count-role-vampire');
+    const dEl = document.getElementById('count-role-doctor');
+    const sEl = document.getElementById('count-role-seer');
+    const villEl = document.getElementById('count-role-villager');
+    const totRolesEl = document.getElementById('customizer-total-roles');
+    const totPlayersEl = document.getElementById('customizer-total-players');
+    const sumTextEl = document.getElementById('customizer-summary-text');
+
+    if (vEl) vEl.textContent = vVal;
+    if (dEl) dEl.textContent = dVal;
+    if (sEl) sEl.textContent = sVal;
+    if (villEl) villEl.textContent = villVal;
+    if (totRolesEl) totRolesEl.textContent = totalRoles;
+    if (totPlayersEl) totPlayersEl.textContent = pCount || 7;
+    if (sumTextEl) {
+      sumTextEl.textContent = `${vVal} Vampir, ${dVal} Doktor, ${sVal} Kahin, ${villVal} Köylü`;
     }
 
     this.state.players.forEach(p => {

@@ -26,6 +26,7 @@ Oyuncu sayısındaki değişimlere (örneğin 8'den 7'ye düşülmesi veya artma
   * **10+ Kişi:** 3 Vampir, 1 Doktor, 1 Kahin, (N - 5) Köylü
 
 * **Lobi Canlı Rol Önizlemesi:** Odaya her yeni arkadaş katıldığında lobi üstünde anlık rol dağılımı rozetlerle (`🧛 2 Vampir`, `💉 1 Doktor` vb.) canlı gösterilir.
+* **Host & Admin Rol Yapılandırma Paneli:** Oda kurucusu (Host) veya Canberk, oyun başlamadan önce lobi panelindeki `⚙️ Rol Dağılımını Ayarla` kartından dilediği rolün sayısını (`+` / `-` butonlarıyla) artırıp azaltabilir, tek tıkla `⚡ Önerilene Sıfırla` diyerek matematiksel ideal dengeye geri dönebilir.
 
 
 ---

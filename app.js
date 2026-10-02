@@ -92,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
       net.startLocalTestMode();
       showView(viewLobby);
 
-      // Oyuncuyu ve 7 botu lobiye ekle
+      // Oyuncuyu ve 6 botu lobiye ekle (7 kişilik test)
       game.state.players = [{
         id: net.playerId,
         name: name,
@@ -103,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
         isBot: false
       }];
 
-      game.addTestBots(8);
+      game.addTestBots(7);
       game.renderLobby();
     });
   }
@@ -127,10 +127,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Host: Kalanı Botla Doldur
+  // Host: Test Botu Ekle (+1 Bot)
   if (btnHostAddBots) {
     btnHostAddBots.addEventListener('click', () => {
-      game.addTestBots(8);
+      game.addTestBots(game.state.players.length + 1);
     });
   }
 
